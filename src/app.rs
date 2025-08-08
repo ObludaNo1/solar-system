@@ -10,10 +10,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{
-    model::{Model, sprite::create_sprite},
-    model_render_pass::ModelRenderPass,
-};
+use crate::scene::Scene;
 
 pub struct App {
     inner: Option<AppInner>,
@@ -107,8 +104,7 @@ struct AppInner {
     config: SurfaceConfiguration,
     device: Device,
     queue: Queue,
-    model_render_pass: ModelRenderPass,
-    models: Vec<Model>,
+    scene: Scene,
 }
 
 impl AppInner {
@@ -175,9 +171,7 @@ impl AppInner {
             view_formats: vec![],
         };
 
-        let model_render_pass = ModelRenderPass::new(&device, &config);
-
-        let models = vec![create_sprite(&device)];
+        let scene = Scene::new(&device, &config);
 
         AppInner {
             window: window_ref,
@@ -185,8 +179,7 @@ impl AppInner {
             device,
             queue,
             config,
-            model_render_pass,
-            models,
+            scene,
         }
     }
 
@@ -210,8 +203,7 @@ impl AppInner {
                 label: Some("Render Encoder"),
             });
 
-        self.model_render_pass
-            .record_draw_commands(&mut encoder, &view, &self.models);
+        self.scene.record_draw_commands(&mut encoder, &view);
 
         self.queue.submit(once(encoder.finish()));
         render_target.present();

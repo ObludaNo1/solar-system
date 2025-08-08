@@ -4,6 +4,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 mod app;
 mod model;
 mod model_render_pass;
+mod scene;
 mod view_proj;
 
 pub async fn run() {
