@@ -1,8 +1,4 @@
-use std::{
-    iter::once,
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::{iter::once, sync::Arc};
 
 use wgpu::*;
 use winit::{
@@ -12,6 +8,11 @@ use winit::{
     event_loop::ActiveEventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowId},
+};
+
+use crate::{
+    model::{Model, sprite::create_sprite},
+    model_render_pass::ModelRenderPass,
 };
 
 pub struct App {
@@ -106,6 +107,8 @@ struct AppInner {
     config: SurfaceConfiguration,
     device: Device,
     queue: Queue,
+    model_render_pass: ModelRenderPass,
+    models: Vec<Model>,
 }
 
 impl AppInner {
@@ -172,12 +175,18 @@ impl AppInner {
             view_formats: vec![],
         };
 
+        let model_render_pass = ModelRenderPass::new(&device, &config);
+
+        let models = vec![create_sprite(&device)];
+
         AppInner {
             window: window_ref,
             surface,
             device,
             queue,
             config,
+            model_render_pass,
+            models,
         }
     }
 
@@ -201,31 +210,8 @@ impl AppInner {
                 label: Some("Render Encoder"),
             });
 
-        encoder.begin_render_pass(&RenderPassDescriptor {
-            label: Some("Render pass"),
-            color_attachments: &[Some(RenderPassColorAttachment {
-                view: &view,
-                resolve_target: None,
-                ops: Operations {
-                    load: LoadOp::Clear(Color {
-                        r: SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("current time is larger than UNIX EPOCH")
-                            .as_secs_f64()
-                            .sin()
-                            * 0.5
-                            + 0.5,
-                        g: 0.2,
-                        b: 0.1,
-                        a: 1.0,
-                    }),
-                    store: StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        });
+        self.model_render_pass
+            .record_draw_commands(&mut encoder, &view, &self.models);
 
         self.queue.submit(once(encoder.finish()));
         render_target.present();

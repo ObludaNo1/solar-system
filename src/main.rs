@@ -2,6 +2,8 @@ use app::App;
 use winit::event_loop::{ControlFlow, EventLoop};
 
 mod app;
+mod model;
+mod model_render_pass;
 
 pub async fn run() {
     let event_loop = EventLoop::new().unwrap();
