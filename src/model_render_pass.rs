@@ -1,18 +1,60 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use wgpu::*;
+use bytemuck::checked::cast_slice;
+use cgmath::Point3;
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    *,
+};
 
-use crate::model::{MeshBuffers, Model, Vertex};
+use crate::{
+    model::{MeshBuffers, Model, Vertex},
+    view_proj::ViewProjMat,
+};
 
 pub struct ModelRenderPass {
     render_pipeline: RenderPipeline,
+    view_proj_bind_group: BindGroup,
 }
 
 impl ModelRenderPass {
     pub fn new(device: &Device, config: &SurfaceConfiguration) -> ModelRenderPass {
+        // define, how the uniforms look like
+        let matrix_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("matrix 4x4 layout"),
+                entries: &[BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let view_proj_mat = ViewProjMat::look_at_center(Point3::new(2.0, 1.0, 2.0));
+
+        let view_proj_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("view-proj buffer"),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            contents: cast_slice(&[view_proj_mat]),
+        });
+
+        let view_proj_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("view-proj bind group"),
+            layout: &matrix_bind_group_layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: view_proj_buffer.as_entire_binding(),
+            }],
+        });
+
         let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&matrix_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -69,7 +111,10 @@ impl ModelRenderPass {
             cache: None,
         });
 
-        ModelRenderPass { render_pipeline }
+        ModelRenderPass {
+            render_pipeline,
+            view_proj_bind_group,
+        }
     }
 
     pub fn record_draw_commands(
@@ -105,6 +150,7 @@ impl ModelRenderPass {
         });
 
         render_pass.set_pipeline(&self.render_pipeline);
+        render_pass.set_bind_group(0, &self.view_proj_bind_group, &[]);
         for model in models {
             for MeshBuffers {
                 vertex_buffer,
