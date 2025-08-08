@@ -7,6 +7,7 @@ pub mod sprite;
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
     position: [f32; 3],
+    colour: [f32; 3],
 }
 
 unsafe impl Pod for Vertex {}
@@ -17,11 +18,18 @@ impl Vertex {
         &VertexBufferLayout {
             array_stride: size_of::<Vertex>() as BufferAddress,
             step_mode: VertexStepMode::Vertex,
-            attributes: &[VertexAttribute {
-                offset: 0,
-                shader_location: 0,
-                format: VertexFormat::Float32x3,
-            }],
+            attributes: &[
+                VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: VertexFormat::Float32x3,
+                },
+                VertexAttribute {
+                    offset: size_of::<[f32; 3]>() as BufferAddress,
+                    shader_location: 1,
+                    format: VertexFormat::Float32x3,
+                },
+            ],
         }
     }
 }
