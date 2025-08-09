@@ -6,6 +6,7 @@ use wgpu::{
 
 use super::{Mesh, Model, Vertex};
 
+#[allow(dead_code)]
 pub fn create_sprite(device: &Device, z_offset: f32) -> Model {
     #[rustfmt::skip]
     let vertices = [
@@ -26,13 +27,13 @@ pub fn create_sprite(device: &Device, z_offset: f32) -> Model {
     let indices = [0u16, 1, 2, 0, 2, 3];
 
     let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Cube Vertex Buffer"),
+        label: Some("Sprite Vertex Buffer"),
         contents: cast_slice(&vertices),
         usage: BufferUsages::VERTEX,
     });
 
     let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: Some("Cube Index Buffer"),
+        label: Some("Sprite Index Buffer"),
         contents: cast_slice(&indices),
         usage: BufferUsages::INDEX,
     });

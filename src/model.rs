@@ -1,6 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::*;
 
+pub mod sphere;
 pub mod sprite;
 
 #[repr(C)]

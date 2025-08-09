@@ -1,7 +1,7 @@
 use wgpu::*;
 
 use crate::{
-    model::{Model, sprite::create_sprite},
+    model::{Model, sphere::create_sphere},
     model_render_pass::ModelRenderPass,
     render_target::{RenderTarget, RenderTargetConfig},
 };
@@ -16,7 +16,7 @@ impl Scene {
         let model_render_pass = ModelRenderPass::new(device, render_target);
         Scene {
             model_render_pass,
-            models: vec![create_sprite(device, -0.5), create_sprite(device, 0.5)],
+            models: vec![create_sphere(device, 1.0, 16, 32)],
         }
     }
 
