@@ -9,7 +9,7 @@ pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewProjMat {
     // The `data` field is required for uniform layout, even if not read directly.
     #[allow(dead_code)]

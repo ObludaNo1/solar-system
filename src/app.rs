@@ -203,7 +203,8 @@ impl AppInner {
                 label: Some("Render Encoder"),
             });
 
-        self.scene.record_draw_commands(&mut encoder, &view);
+        self.scene
+            .record_draw_commands(&self.queue, &mut encoder, &view);
 
         self.queue.submit(once(encoder.finish()));
         render_target.present();

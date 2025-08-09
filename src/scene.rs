@@ -19,8 +19,13 @@ impl Scene {
         }
     }
 
-    pub fn record_draw_commands(&self, encoder: &mut CommandEncoder, render_target: &TextureView) {
+    pub fn record_draw_commands(
+        &self,
+        queue: &Queue,
+        encoder: &mut CommandEncoder,
+        render_target: &TextureView,
+    ) {
         self.model_render_pass
-            .record_draw_commands(encoder, render_target, &self.models);
+            .record_draw_commands(queue, encoder, render_target, &self.models);
     }
 }
