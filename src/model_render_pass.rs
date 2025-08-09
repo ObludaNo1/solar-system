@@ -13,6 +13,7 @@ use wgpu::{
 use crate::{
     matrix::{model_mat::ModelMat, view_proj_mat::ViewProjMat},
     model::{MeshBuffers, Model, Vertex},
+    render_target::{RenderTarget, RenderTargetConfig},
 };
 
 pub struct ModelRenderPass {
@@ -23,7 +24,7 @@ pub struct ModelRenderPass {
 }
 
 impl ModelRenderPass {
-    pub fn new(device: &Device, target_texture_format: TextureFormat) -> ModelRenderPass {
+    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> ModelRenderPass {
         // define, how the uniforms look like
         let matrix_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -95,7 +96,7 @@ impl ModelRenderPass {
                 module: &shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(ColorTargetState {
-                    format: target_texture_format,
+                    format: render_target.target_texture_format(),
                     blend: Some(BlendState {
                         color: BlendComponent::REPLACE,
                         alpha: BlendComponent::REPLACE,
@@ -117,7 +118,17 @@ impl ModelRenderPass {
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(DepthStencilState {
+                format: render_target.depth_texture_format(),
+                depth_write_enabled: true,
+                depth_compare: CompareFunction::Less,
+                stencil: StencilState::default(),
+                bias: DepthBiasState {
+                    constant: 2, // Corresponds to bilinear filtering
+                    slope_scale: 2.0,
+                    clamp: 0.0,
+                },
+            }),
             multisample: MultisampleState {
                 count: 1,
                 mask: !0,
@@ -142,14 +153,14 @@ impl ModelRenderPass {
         &self,
         queue: &Queue,
         encoder: &mut CommandEncoder,
-        render_target: &TextureView,
+        render_target: &RenderTarget,
         models: &[Model],
     ) {
         queue.write_buffer(&self.model_buffer, 0, cast_slice(&[create_rot_matrix()]));
         let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(RenderPassColorAttachment {
-                view: render_target,
+                view: &render_target.surface_texture_view(),
                 resolve_target: None,
                 ops: Operations {
                     load: LoadOp::Clear(Color {
@@ -167,7 +178,14 @@ impl ModelRenderPass {
                     store: StoreOp::Store,
                 },
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                view: render_target.config.depth_texture_view(),
+                depth_ops: Some(Operations {
+                    load: LoadOp::Clear(1.0),
+                    store: StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
             occlusion_query_set: None,
             timestamp_writes: None,
         });

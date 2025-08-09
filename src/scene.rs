@@ -3,6 +3,7 @@ use wgpu::*;
 use crate::{
     model::{Model, sprite::create_sprite},
     model_render_pass::ModelRenderPass,
+    render_target::{RenderTarget, RenderTargetConfig},
 };
 
 pub struct Scene {
@@ -11,11 +12,11 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(device: &Device, target_texture_format: TextureFormat) -> Scene {
-        let model_render_pass = ModelRenderPass::new(device, target_texture_format);
+    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> Scene {
+        let model_render_pass = ModelRenderPass::new(device, render_target);
         Scene {
             model_render_pass,
-            models: vec![create_sprite(device)],
+            models: vec![create_sprite(device, -0.5), create_sprite(device, 0.5)],
         }
     }
 
@@ -23,7 +24,7 @@ impl Scene {
         &self,
         queue: &Queue,
         encoder: &mut CommandEncoder,
-        render_target: &TextureView,
+        render_target: &RenderTarget,
     ) {
         self.model_render_pass
             .record_draw_commands(queue, encoder, render_target, &self.models);

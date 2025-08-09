@@ -6,13 +6,13 @@ use wgpu::{
 
 use super::{Mesh, Model, Vertex};
 
-pub fn create_sprite(device: &Device) -> Model {
+pub fn create_sprite(device: &Device, z_offset: f32) -> Model {
     #[rustfmt::skip]
     let vertices = [
-        [-0.5, -0.5,  0.5,  1.0,  0.0,  0.0],
-        [-0.5,  0.5,  0.5,  1.0,  1.0,  0.0],
-        [ 0.5,  0.5,  0.5,  0.0,  1.0,  1.0],
-        [ 0.5, -0.5,  0.5,  0.0,  0.0,  1.0],
+        [-0.5, -0.5,  z_offset,  1.0,  0.0,  0.0],
+        [-0.5,  0.5,  z_offset,  1.0,  1.0,  0.0],
+        [ 0.5,  0.5,  z_offset,  0.0,  1.0,  1.0],
+        [ 0.5, -0.5,  z_offset,  0.0,  0.0,  1.0],
     ];
 
     let vertices = vertices

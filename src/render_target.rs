@@ -1,13 +1,21 @@
 use wgpu::*;
 use winit::dpi::PhysicalSize;
 
-pub struct RenderTarget<'window> {
+pub struct RenderTargetConfig<'window> {
     surface: Surface<'window>,
     config: SurfaceConfiguration,
+    depth_texture: (Texture, TextureView),
 }
 
-impl<'window> RenderTarget<'window> {
-    pub fn new(size: PhysicalSize<u32>, surface: Surface<'window>, adapter: &Adapter) -> Self {
+const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
+
+impl<'window> RenderTargetConfig<'window> {
+    pub fn new(
+        size: PhysicalSize<u32>,
+        device: &Device,
+        surface: Surface<'window>,
+        adapter: &Adapter,
+    ) -> Result<Self, SurfaceError> {
         let surface_caps = surface.get_capabilities(&adapter);
 
         // Shader code in this project assumes an Srgb surface texture. Using a different one will
@@ -44,24 +52,88 @@ impl<'window> RenderTarget<'window> {
             view_formats: vec![],
         };
 
-        RenderTarget { surface, config }
+        let depth_texture = create_depth_texture(
+            &device,
+            PhysicalSize {
+                width: config.width,
+                height: config.height,
+            },
+        );
+
+        Ok(RenderTargetConfig {
+            surface,
+            config,
+            depth_texture,
+        })
     }
 
     pub fn resize(&mut self, device: &Device, new_size: PhysicalSize<u32>) {
         self.config.width = new_size.width.max(1);
         self.config.height = new_size.height.max(1);
         self.surface.configure(device, &self.config);
+        self.depth_texture = create_depth_texture(&device, new_size);
+    }
+
+    /// Gets new render target with surface colour buffer attached to it.
+    ///
+    /// # Panics
+    ///
+    /// Panics, if previous result is not yet dropped.
+    pub fn next_frame(&self) -> Result<RenderTarget<'_>, SurfaceError> {
+        let surface_texture = self.surface.get_current_texture()?;
+        Ok(RenderTarget {
+            config: self,
+            surface_texture,
+        })
+    }
+
+    pub fn depth_texture_view(&self) -> &TextureView {
+        &self.depth_texture.1
     }
 
     pub fn target_texture_format(&self) -> TextureFormat {
         self.config.format
     }
 
-    pub fn get_current_texture(&self) -> Result<(SurfaceTexture, TextureView), SurfaceError> {
-        let colour_buffer = self.surface.get_current_texture()?;
-        let view = colour_buffer
-            .texture
-            .create_view(&TextureViewDescriptor::default());
-        Ok((colour_buffer, view))
+    pub fn depth_texture_format(&self) -> TextureFormat {
+        DEPTH_FORMAT
     }
+}
+
+pub struct RenderTarget<'window> {
+    pub config: &'window RenderTargetConfig<'window>,
+    pub surface_texture: SurfaceTexture,
+}
+
+impl<'window> RenderTarget<'window> {
+    pub fn present(self) {
+        self.surface_texture.present();
+    }
+
+    pub fn surface_texture_view(&self) -> TextureView {
+        self.surface_texture
+            .texture
+            .create_view(&TextureViewDescriptor::default())
+    }
+}
+
+fn create_depth_texture(device: &Device, size: PhysicalSize<u32>) -> (Texture, TextureView) {
+    let size = Extent3d {
+        width: size.width.max(1),
+        height: size.height.max(1),
+        depth_or_array_layers: 1,
+    };
+    let texture = device.create_texture(&TextureDescriptor {
+        label: Some("Depth Texture"),
+        size,
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: TextureDimension::D2,
+        format: DEPTH_FORMAT,
+        usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+        view_formats: &[DEPTH_FORMAT],
+    });
+    let view = texture.create_view(&TextureViewDescriptor::default());
+
+    (texture, view)
 }

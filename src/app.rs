@@ -10,7 +10,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::{render_target::RenderTarget, scene::Scene};
+use crate::{render_target::RenderTargetConfig, scene::Scene};
 
 pub struct App {
     inner: Option<AppInner>,
@@ -45,14 +45,21 @@ impl App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // TODO not ideal to block on here, unless other thread does it
-        self.inner = Some(pollster::block_on(async {
+        let result = pollster::block_on(async {
             AppInner::new(
                 event_loop
                     .create_window(Window::default_attributes().with_title("Solar system"))
                     .unwrap(),
             )
             .await
-        }));
+        });
+        match result {
+            Ok(inner) => self.inner = Some(inner),
+            Err(e) => {
+                eprintln!("Failed to create app: {e:?}");
+                event_loop.exit();
+            }
+        }
     }
 
     fn window_event(
@@ -101,13 +108,13 @@ impl ApplicationHandler for App {
 struct AppInner {
     window: Arc<Window>,
     device: Device,
-    render_target: RenderTarget<'static>,
+    render_target: RenderTargetConfig<'static>,
     queue: Queue,
     scene: Scene,
 }
 
 impl AppInner {
-    async fn new(window: Window) -> AppInner {
+    async fn new(window: Window) -> Result<AppInner, SurfaceError> {
         let window = Arc::new(window);
         let instance = Instance::new(&InstanceDescriptor {
             backends: Backends::PRIMARY,
@@ -133,17 +140,18 @@ impl AppInner {
             .await
             .unwrap();
 
-        let render_target = RenderTarget::new(window.inner_size(), surface, &adapter);
+        let render_target =
+            RenderTargetConfig::new(window.inner_size(), &device, surface, &adapter)?;
 
-        let scene = Scene::new(&device, render_target.target_texture_format());
+        let scene = Scene::new(&device, &render_target);
 
-        AppInner {
+        Ok(AppInner {
             window,
             device,
             render_target,
             queue,
             scene,
-        }
+        })
     }
 
     fn resize(&mut self, new_size: PhysicalSize<u32>) {
@@ -151,7 +159,7 @@ impl AppInner {
     }
 
     fn render(&self) -> Result<(), SurfaceError> {
-        let (colour_buffer, view) = self.render_target.get_current_texture()?;
+        let render_target = self.render_target.next_frame()?;
 
         let mut encoder = self
             .device
@@ -160,10 +168,10 @@ impl AppInner {
             });
 
         self.scene
-            .record_draw_commands(&self.queue, &mut encoder, &view);
+            .record_draw_commands(&self.queue, &mut encoder, &render_target);
 
         self.queue.submit(once(encoder.finish()));
-        colour_buffer.present();
+        render_target.present();
 
         Ok(())
     }
