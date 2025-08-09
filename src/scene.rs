@@ -11,8 +11,8 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(device: &Device, config: &SurfaceConfiguration) -> Scene {
-        let model_render_pass = ModelRenderPass::new(device, config);
+    pub fn new(device: &Device, target_texture_format: TextureFormat) -> Scene {
+        let model_render_pass = ModelRenderPass::new(device, target_texture_format);
         Scene {
             model_render_pass,
             models: vec![create_sprite(device)],

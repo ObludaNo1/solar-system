@@ -23,7 +23,7 @@ pub struct ModelRenderPass {
 }
 
 impl ModelRenderPass {
-    pub fn new(device: &Device, config: &SurfaceConfiguration) -> ModelRenderPass {
+    pub fn new(device: &Device, target_texture_format: TextureFormat) -> ModelRenderPass {
         // define, how the uniforms look like
         let matrix_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -95,7 +95,7 @@ impl ModelRenderPass {
                 module: &shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(ColorTargetState {
-                    format: config.format,
+                    format: target_texture_format,
                     blend: Some(BlendState {
                         color: BlendComponent::REPLACE,
                         alpha: BlendComponent::REPLACE,

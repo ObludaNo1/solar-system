@@ -10,7 +10,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::scene::Scene;
+use crate::{render_target::RenderTarget, scene::Scene};
 
 pub struct App {
     inner: Option<AppInner>,
@@ -100,22 +100,20 @@ impl ApplicationHandler for App {
 
 struct AppInner {
     window: Arc<Window>,
-    surface: Surface<'static>,
-    config: SurfaceConfiguration,
     device: Device,
+    render_target: RenderTarget<'static>,
     queue: Queue,
     scene: Scene,
 }
 
 impl AppInner {
     async fn new(window: Window) -> AppInner {
-        let size = window.inner_size();
-        let window_ref = Arc::new(window);
+        let window = Arc::new(window);
         let instance = Instance::new(&InstanceDescriptor {
             backends: Backends::PRIMARY,
             ..Default::default()
         });
-        let surface = instance.create_surface(window_ref.clone()).unwrap();
+        let surface = instance.create_surface(window.clone()).unwrap();
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
                 power_preference: PowerPreference::None,
@@ -135,67 +133,25 @@ impl AppInner {
             .await
             .unwrap();
 
-        let surface_caps = surface.get_capabilities(&adapter);
+        let render_target = RenderTarget::new(window.inner_size(), surface, &adapter);
 
-        // Shader code in this project assumes an Srgb surface texture. Using a different one will
-        // result all the colors comming out darker. If you want to support non Srgb surfaces,
-        // you'll need to account for that when drawing to the frame.
-        let format = *surface_caps
-            .formats
-            .iter()
-            .find(|f| f.is_srgb())
-            .unwrap_or(&surface_caps.formats[0]);
-        // TODO using FIFO can make the app really non-interactive. It is best to use MailBox
-        // present mode for better responsiveness of the application. However many frames can be
-        // generated without being presented. Therefore the best solution would be to use MailBox
-        // with some CPU limited frame rate.
-        let present_mode = *surface_caps
-            .present_modes
-            .iter()
-            .find(|pm| **pm == PresentMode::Mailbox)
-            .unwrap_or(&surface_caps.present_modes[0]);
-        let alpha_mode = *surface_caps
-            .alpha_modes
-            .iter()
-            .find(|a| **a == CompositeAlphaMode::PostMultiplied)
-            .unwrap_or(&surface_caps.alpha_modes[0]);
-
-        let config = SurfaceConfiguration {
-            usage: TextureUsages::RENDER_ATTACHMENT,
-            format,
-            width: size.width,
-            height: size.height,
-            present_mode,
-            alpha_mode,
-            desired_maximum_frame_latency: 2,
-            view_formats: vec![],
-        };
-
-        let scene = Scene::new(&device, &config);
+        let scene = Scene::new(&device, render_target.target_texture_format());
 
         AppInner {
-            window: window_ref,
-            surface,
+            window,
             device,
+            render_target,
             queue,
-            config,
             scene,
         }
     }
 
     fn resize(&mut self, new_size: PhysicalSize<u32>) {
-        if new_size.width > 0 && new_size.height > 0 {
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
-            self.surface.configure(&self.device, &self.config);
-        }
+        self.render_target.resize(&self.device, new_size);
     }
 
     fn render(&self) -> Result<(), SurfaceError> {
-        let render_target = self.surface.get_current_texture()?;
-        let view = render_target
-            .texture
-            .create_view(&TextureViewDescriptor::default());
+        let (colour_buffer, view) = self.render_target.get_current_texture()?;
 
         let mut encoder = self
             .device
@@ -207,7 +163,7 @@ impl AppInner {
             .record_draw_commands(&self.queue, &mut encoder, &view);
 
         self.queue.submit(once(encoder.finish()));
-        render_target.present();
+        colour_buffer.present();
 
         Ok(())
     }

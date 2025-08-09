@@ -5,6 +5,7 @@ mod app;
 mod matrix;
 mod model;
 mod model_render_pass;
+mod render_target;
 mod scene;
 
 pub async fn run() {
