@@ -12,8 +12,8 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> Scene {
-        let model_render_pass = ModelRenderPass::new(device, render_target);
+    pub fn new(device: &Device, queue: &Queue, render_target: &RenderTargetConfig) -> Scene {
+        let model_render_pass = ModelRenderPass::new(device, queue, render_target);
         Scene {
             model_render_pass,
             models: vec![create_sphere(device, 1.0, 16, 32)],

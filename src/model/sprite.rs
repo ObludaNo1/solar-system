@@ -10,17 +10,17 @@ use super::{Mesh, Model, Vertex};
 pub fn create_sprite(device: &Device, z_offset: f32) -> Model {
     #[rustfmt::skip]
     let vertices = [
-        [-0.5, -0.5,  z_offset,  1.0,  0.0,  0.0],
-        [-0.5,  0.5,  z_offset,  1.0,  1.0,  0.0],
-        [ 0.5,  0.5,  z_offset,  0.0,  1.0,  1.0],
-        [ 0.5, -0.5,  z_offset,  0.0,  0.0,  1.0],
+        [-0.5, -0.5,  z_offset,  0.0,  0.0],
+        [-0.5,  0.5,  z_offset,  0.0,  1.0],
+        [ 0.5,  0.5,  z_offset,  1.0,  1.0],
+        [ 0.5, -0.5,  z_offset,  1.0,  0.0],
     ];
 
     let vertices = vertices
         .into_iter()
         .map(|data| Vertex {
             position: [data[0], data[1], data[2]],
-            colour: [data[3], data[4], data[5]],
+            tex_coords: [data[3], data[4]],
         })
         .collect::<Vec<_>>();
 

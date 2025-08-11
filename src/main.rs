@@ -7,6 +7,7 @@ mod model;
 mod model_render_pass;
 mod render_target;
 mod scene;
+mod texture;
 
 pub async fn run() {
     let event_loop = EventLoop::new().unwrap();

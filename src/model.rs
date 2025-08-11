@@ -8,7 +8,7 @@ pub mod sprite;
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
     position: [f32; 3],
-    colour: [f32; 3],
+    tex_coords: [f32; 2],
 }
 
 unsafe impl Pod for Vertex {}
@@ -28,7 +28,7 @@ impl Vertex {
                 VertexAttribute {
                     offset: size_of::<[f32; 3]>() as BufferAddress,
                     shader_location: 1,
-                    format: VertexFormat::Float32x3,
+                    format: VertexFormat::Float32x2,
                 },
             ],
         }

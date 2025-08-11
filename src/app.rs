@@ -143,7 +143,7 @@ impl AppInner {
         let render_target =
             RenderTargetConfig::new(window.inner_size(), &device, surface, &adapter)?;
 
-        let scene = Scene::new(&device, &render_target);
+        let scene = Scene::new(&device, &queue, &render_target);
 
         Ok(AppInner {
             window,

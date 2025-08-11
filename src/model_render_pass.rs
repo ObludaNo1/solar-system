@@ -5,6 +5,8 @@ use std::{
 
 use bytemuck::checked::cast_slice;
 use cgmath::{Point3, Vector3};
+use image::{Rgba, RgbaImage};
+use rand::Rng;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     *,
@@ -14,6 +16,7 @@ use crate::{
     matrix::{model_mat::ModelMat, view_proj_mat::ViewProjMat},
     model::{MeshBuffers, Model, Vertex},
     render_target::{RenderTarget, RenderTargetConfig},
+    texture::texture::RgbaTexture,
 };
 
 pub struct ModelRenderPass {
@@ -21,10 +24,17 @@ pub struct ModelRenderPass {
     view_proj_bind_group: BindGroup,
     model_buffer: Buffer,
     model_bind_group: BindGroup,
+    #[allow(unused)]
+    texture: RgbaTexture,
+    texture_bind_group: BindGroup,
 }
 
 impl ModelRenderPass {
-    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> ModelRenderPass {
+    pub fn new(
+        device: &Device,
+        queue: &Queue,
+        render_target: &RenderTargetConfig,
+    ) -> ModelRenderPass {
         // define, how the uniforms look like
         let matrix_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -41,7 +51,30 @@ impl ModelRenderPass {
                 }],
             });
 
-        let view_proj_mat = ViewProjMat::look_at_center(Point3::new(2.0, 1.0, 2.0));
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("Texture Bind Group Layout"),
+                entries: &[
+                    BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Texture {
+                            sample_type: TextureSampleType::Float { filterable: true },
+                            view_dimension: TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: ShaderStages::FRAGMENT,
+                        ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            });
+
+        let view_proj_mat = ViewProjMat::look_at_center(Point3::new(2.0, 2.0, 2.0));
         let model_mat = ModelMat::identity();
 
         let view_proj_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -74,7 +107,11 @@ impl ModelRenderPass {
 
         let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&matrix_bind_group_layout, &matrix_bind_group_layout],
+            bind_group_layouts: &[
+                &matrix_bind_group_layout,
+                &matrix_bind_group_layout,
+                &texture_bind_group_layout,
+            ],
             push_constant_ranges: &[],
         });
 
@@ -141,11 +178,35 @@ impl ModelRenderPass {
             cache: None,
         });
 
+        let mut rng = rand::rng();
+        let image = RgbaImage::from_fn(128, 128, |_, _| {
+            Rgba([rng.random(), rng.random(), rng.random(), 255])
+        });
+
+        let texture = RgbaTexture::from_image(device, queue, image.into());
+
+        let texture_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("Texture Bind Group"),
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(&texture.view),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::Sampler(&texture.sampler),
+                },
+            ],
+            layout: &texture_bind_group_layout,
+        });
+
         ModelRenderPass {
             render_pipeline,
             view_proj_bind_group,
             model_buffer,
             model_bind_group,
+            texture,
+            texture_bind_group,
         }
     }
 
@@ -193,6 +254,7 @@ impl ModelRenderPass {
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.view_proj_bind_group, &[]);
         render_pass.set_bind_group(1, &self.model_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.texture_bind_group, &[]);
         for model in models {
             for MeshBuffers {
                 vertex_buffer,
