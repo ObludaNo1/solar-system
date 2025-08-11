@@ -1,10 +1,10 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::*;
 
-use crate::texture::texture::RgbaTexture;
+use crate::{matrix::model_mat::ModelMat, texture::texture::RgbaTexture};
 
 pub mod sphere;
-pub mod sprite;
+// pub mod sprite;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -46,7 +46,14 @@ pub struct Model {
     #[allow(unused)]
     texture: RgbaTexture,
     texture_bind_group: BindGroup,
+    model_matrix: ModelMat,
     meshes: Vec<Mesh>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ModelBindGroupDescriptor<'a> {
+    pub layout: &'a BindGroupLayout,
+    pub binding: u32,
 }
 
 pub struct MeshBuffers<'a> {
@@ -57,6 +64,14 @@ pub struct MeshBuffers<'a> {
 }
 
 impl<'a> Model {
+    pub fn model_matrix(&self) -> &ModelMat {
+        &self.model_matrix
+    }
+
+    pub fn texture_bind_group(&self) -> &BindGroup {
+        &self.texture_bind_group
+    }
+
     pub fn meshes(&'a self) -> impl Iterator<Item = MeshBuffers<'a>> {
         self.meshes.iter().map(|mesh| MeshBuffers {
             texture_bind_group: &self.texture_bind_group,

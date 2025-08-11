@@ -6,18 +6,14 @@ use wgpu::{
     *,
 };
 
-use crate::texture::texture::{RgbaTexture, TextureBindGroupDescriptor};
+use crate::{
+    matrix::model_mat::ModelMat,
+    texture::texture::{RgbaTexture, TextureBindGroupDescriptor},
+};
 
 use super::{Mesh, Model, Vertex};
 
-pub fn create_sphere(
-    device: &Device,
-    texture: RgbaTexture,
-    texture_layout: TextureBindGroupDescriptor,
-    radius: f32,
-    lat_segments: u32,
-    long_segments: u32,
-) -> Model {
+fn generate_buffers(radius: f32, lat_segments: u32, long_segments: u32) -> (Vec<Vertex>, Vec<u16>) {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
 
@@ -63,6 +59,20 @@ pub fn create_sphere(
         }
     }
 
+    (vertices, indices)
+}
+
+pub fn create_sphere(
+    device: &Device,
+    texture: RgbaTexture,
+    texture_layout: TextureBindGroupDescriptor,
+    radius: f32,
+    lat_segments: u32,
+    long_segments: u32,
+    model_matrix: ModelMat,
+) -> Model {
+    let (vertices, indices) = generate_buffers(radius, lat_segments, long_segments);
+
     let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: Some("Sphere Vertex Buffer"),
         contents: cast_slice(&vertices),
@@ -93,6 +103,7 @@ pub fn create_sphere(
     Model {
         texture,
         texture_bind_group,
+        model_matrix,
         meshes: vec![Mesh {
             vertex_buffer,
             index_buffer,
