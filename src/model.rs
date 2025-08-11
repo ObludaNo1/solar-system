@@ -1,6 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::*;
 
+use crate::texture::texture::RgbaTexture;
+
 pub mod sphere;
 pub mod sprite;
 
@@ -41,10 +43,14 @@ pub struct Mesh {
 }
 
 pub struct Model {
+    #[allow(unused)]
+    texture: RgbaTexture,
+    texture_bind_group: BindGroup,
     meshes: Vec<Mesh>,
 }
 
 pub struct MeshBuffers<'a> {
+    pub texture_bind_group: &'a BindGroup,
     pub vertex_buffer: BufferSlice<'a>,
     pub index_buffer: BufferSlice<'a>,
     pub index_format: IndexFormat,
@@ -53,6 +59,7 @@ pub struct MeshBuffers<'a> {
 impl<'a> Model {
     pub fn meshes(&'a self) -> impl Iterator<Item = MeshBuffers<'a>> {
         self.meshes.iter().map(|mesh| MeshBuffers {
+            texture_bind_group: &self.texture_bind_group,
             vertex_buffer: mesh.vertex_buffer.slice(..),
             index_buffer: mesh.index_buffer.slice(..),
             index_format: IndexFormat::Uint16,

@@ -5,8 +5,6 @@ use std::{
 
 use bytemuck::checked::cast_slice;
 use cgmath::{Point3, Vector3};
-use image::{Rgba, RgbaImage};
-use rand::Rng;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     *,
@@ -16,7 +14,7 @@ use crate::{
     matrix::{model_mat::ModelMat, view_proj_mat::ViewProjMat},
     model::{MeshBuffers, Model, Vertex},
     render_target::{RenderTarget, RenderTargetConfig},
-    texture::texture::RgbaTexture,
+    texture::texture::TextureBindGroupDescriptor,
 };
 
 pub struct ModelRenderPass {
@@ -24,17 +22,11 @@ pub struct ModelRenderPass {
     view_proj_bind_group: BindGroup,
     model_buffer: Buffer,
     model_bind_group: BindGroup,
-    #[allow(unused)]
-    texture: RgbaTexture,
-    texture_bind_group: BindGroup,
+    texture_bind_group_layout: BindGroupLayout,
 }
 
 impl ModelRenderPass {
-    pub fn new(
-        device: &Device,
-        queue: &Queue,
-        render_target: &RenderTargetConfig,
-    ) -> ModelRenderPass {
+    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> ModelRenderPass {
         // define, how the uniforms look like
         let matrix_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -178,35 +170,20 @@ impl ModelRenderPass {
             cache: None,
         });
 
-        let mut rng = rand::rng();
-        let image = RgbaImage::from_fn(128, 128, |_, _| {
-            Rgba([rng.random(), rng.random(), rng.random(), 255])
-        });
-
-        let texture = RgbaTexture::from_image(device, queue, image.into());
-
-        let texture_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: Some("Texture Bind Group"),
-            entries: &[
-                BindGroupEntry {
-                    binding: 0,
-                    resource: BindingResource::TextureView(&texture.view),
-                },
-                BindGroupEntry {
-                    binding: 1,
-                    resource: BindingResource::Sampler(&texture.sampler),
-                },
-            ],
-            layout: &texture_bind_group_layout,
-        });
-
         ModelRenderPass {
             render_pipeline,
             view_proj_bind_group,
             model_buffer,
             model_bind_group,
-            texture,
-            texture_bind_group,
+            texture_bind_group_layout,
+        }
+    }
+
+    pub fn texture_layout(&self) -> TextureBindGroupDescriptor<'_> {
+        TextureBindGroupDescriptor {
+            layout: &self.texture_bind_group_layout,
+            binding_view: 0,
+            binding_sampler: 1,
         }
     }
 
@@ -254,14 +231,15 @@ impl ModelRenderPass {
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.view_proj_bind_group, &[]);
         render_pass.set_bind_group(1, &self.model_bind_group, &[]);
-        render_pass.set_bind_group(2, &self.texture_bind_group, &[]);
         for model in models {
             for MeshBuffers {
+                texture_bind_group,
                 vertex_buffer,
                 index_buffer,
                 index_format,
             } in model.meshes()
             {
+                render_pass.set_bind_group(2, texture_bind_group, &[]);
                 render_pass.set_vertex_buffer(0, vertex_buffer);
                 render_pass.set_index_buffer(index_buffer, index_format);
                 // Index buffer contains u16 indices stored in u8 array. The number of elements is

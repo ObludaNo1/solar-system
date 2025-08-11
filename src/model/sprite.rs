@@ -1,13 +1,20 @@
 use bytemuck::cast_slice;
 use wgpu::{
-    BufferUsages, Device,
     util::{BufferInitDescriptor, DeviceExt},
+    *,
 };
+
+use crate::texture::texture::{RgbaTexture, TextureBindGroupDescriptor};
 
 use super::{Mesh, Model, Vertex};
 
 #[allow(dead_code)]
-pub fn create_sprite(device: &Device, z_offset: f32) -> Model {
+pub fn create_sprite(
+    device: &Device,
+    texture: RgbaTexture,
+    texture_layout: TextureBindGroupDescriptor,
+    z_offset: f32,
+) -> Model {
     #[rustfmt::skip]
     let vertices = [
         [-0.5, -0.5,  z_offset,  0.0,  0.0],
@@ -38,7 +45,24 @@ pub fn create_sprite(device: &Device, z_offset: f32) -> Model {
         usage: BufferUsages::INDEX,
     });
 
+    let texture_bind_group = device.create_bind_group(&BindGroupDescriptor {
+        label: Some("Texture Bind Group"),
+        entries: &[
+            BindGroupEntry {
+                binding: texture_layout.binding_view,
+                resource: BindingResource::TextureView(&texture.view),
+            },
+            BindGroupEntry {
+                binding: texture_layout.binding_sampler,
+                resource: BindingResource::Sampler(&texture.sampler),
+            },
+        ],
+        layout: &texture_layout.layout,
+    });
+
     Model {
+        texture,
+        texture_bind_group,
         meshes: vec![Mesh {
             vertex_buffer,
             index_buffer,

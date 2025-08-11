@@ -2,13 +2,22 @@ use std::f32::consts::PI;
 
 use bytemuck::cast_slice;
 use wgpu::{
-    BufferUsages, Device,
     util::{BufferInitDescriptor, DeviceExt},
+    *,
 };
+
+use crate::texture::texture::{RgbaTexture, TextureBindGroupDescriptor};
 
 use super::{Mesh, Model, Vertex};
 
-pub fn create_sphere(device: &Device, radius: f32, lat_segments: u32, long_segments: u32) -> Model {
+pub fn create_sphere(
+    device: &Device,
+    texture: RgbaTexture,
+    texture_layout: TextureBindGroupDescriptor,
+    radius: f32,
+    lat_segments: u32,
+    long_segments: u32,
+) -> Model {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
 
@@ -66,7 +75,24 @@ pub fn create_sphere(device: &Device, radius: f32, lat_segments: u32, long_segme
         usage: BufferUsages::INDEX,
     });
 
+    let texture_bind_group = device.create_bind_group(&BindGroupDescriptor {
+        label: Some("Texture Bind Group"),
+        entries: &[
+            BindGroupEntry {
+                binding: texture_layout.binding_view,
+                resource: BindingResource::TextureView(&texture.view),
+            },
+            BindGroupEntry {
+                binding: texture_layout.binding_sampler,
+                resource: BindingResource::Sampler(&texture.sampler),
+            },
+        ],
+        layout: &texture_layout.layout,
+    });
+
     Model {
+        texture,
+        texture_bind_group,
         meshes: vec![Mesh {
             vertex_buffer,
             index_buffer,

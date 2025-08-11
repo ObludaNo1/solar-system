@@ -55,3 +55,10 @@ impl RgbaTexture {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextureBindGroupDescriptor<'a> {
+    pub layout: &'a BindGroupLayout,
+    pub binding_view: u32,
+    pub binding_sampler: u32,
+}
