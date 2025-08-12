@@ -2,8 +2,7 @@ use std::time::SystemTime;
 
 use bytemuck::cast_slice;
 use cgmath::Vector3;
-use image::{Rgba, RgbaImage};
-use rand::Rng;
+use image::ImageReader;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     *,
@@ -59,8 +58,6 @@ impl Scene {
         let texture_layout = model_render_pass.texture_layout();
         let model_layout = model_render_pass.model_layout();
 
-        let mut rng = rand::rng();
-
         Scene {
             init_time: SystemTime::now(),
             models: vec![
@@ -71,8 +68,10 @@ impl Scene {
                         RgbaTexture::from_image(
                             device,
                             queue,
-                            RgbaImage::from_fn(128, 128, |_, _| Rgba([rng.random(), 0, 0, 255]))
-                                .into(),
+                            ImageReader::open("resources/2k_earth_daymap.jpg")
+                                .unwrap()
+                                .decode()
+                                .unwrap(),
                         ),
                         texture_layout,
                         0.5,
@@ -89,8 +88,10 @@ impl Scene {
                         RgbaTexture::from_image(
                             device,
                             queue,
-                            RgbaImage::from_fn(128, 128, |_, _| Rgba([0, rng.random(), 0, 255]))
-                                .into(),
+                            ImageReader::open("resources/2k_mars.jpg")
+                                .unwrap()
+                                .decode()
+                                .unwrap(),
                         ),
                         texture_layout,
                         0.5,
@@ -111,8 +112,10 @@ impl Scene {
                         RgbaTexture::from_image(
                             device,
                             queue,
-                            RgbaImage::from_fn(128, 128, |_, _| Rgba([0, 0, rng.random(), 255]))
-                                .into(),
+                            ImageReader::open("resources/2k_haumea_fictional.jpg")
+                                .unwrap()
+                                .decode()
+                                .unwrap(),
                         ),
                         texture_layout,
                         0.5,

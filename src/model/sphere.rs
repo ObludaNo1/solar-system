@@ -35,7 +35,7 @@ fn generate_buffers(radius: f32, lat_segments: u32, long_segments: u32) -> (Vec<
                 position: [px, py, pz],
                 tex_coords: [
                     x as f32 / long_segments as f32,
-                    1.0 - y as f32 / lat_segments as f32,
+                    y as f32 / lat_segments as f32,
                 ],
             });
         }
