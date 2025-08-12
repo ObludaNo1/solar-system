@@ -1,14 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use bytemuck::checked::cast_slice;
-use cgmath::Point3;
-use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
-    *,
-};
+use wgpu::*;
 
 use crate::{
-    matrix::view_proj_mat::ViewProjMat,
     model::{MeshBuffers, ModelBindGroupDescriptor, Vertex},
     render_target::{RenderTarget, RenderTargetConfig},
     scene::SceneModel,
@@ -23,7 +17,11 @@ pub struct ModelRenderPass {
 }
 
 impl ModelRenderPass {
-    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> ModelRenderPass {
+    pub fn new(
+        device: &Device,
+        render_target: &RenderTargetConfig,
+        view_proj_buffer: &Buffer,
+    ) -> ModelRenderPass {
         // define, how the uniforms look like
         let matrix_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -62,14 +60,6 @@ impl ModelRenderPass {
                     },
                 ],
             });
-
-        let view_proj_mat = ViewProjMat::look_at_center(Point3::new(2.0, 2.0, 2.0));
-
-        let view_proj_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("view-proj buffer"),
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            contents: cast_slice(&[view_proj_mat]),
-        });
 
         let view_proj_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("view-proj bind group"),

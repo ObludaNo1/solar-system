@@ -7,8 +7,10 @@ use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     *,
 };
+use winit::dpi::PhysicalSize;
 
 use crate::{
+    camera::Camera,
     matrix::model_mat::ModelMat,
     model::{Model, ModelBindGroupDescriptor, sphere::create_sphere},
     model_render_pass::ModelRenderPass,
@@ -49,11 +51,21 @@ pub struct Scene {
     init_time: SystemTime,
     model_render_pass: ModelRenderPass,
     models: Vec<SceneModel>,
+    camera: Camera,
+    view_proj_buffer: Buffer,
 }
 
 impl Scene {
     pub fn new(device: &Device, queue: &Queue, render_target: &RenderTargetConfig) -> Scene {
-        let model_render_pass = ModelRenderPass::new(device, render_target);
+        let camera = Camera::default();
+        let view_proj_mat = camera.view_proj_matrix();
+        let view_proj_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("view-proj buffer"),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            contents: cast_slice(&[view_proj_mat]),
+        });
+
+        let model_render_pass = ModelRenderPass::new(device, render_target, &view_proj_buffer);
 
         let texture_layout = model_render_pass.texture_layout();
         let model_layout = model_render_pass.model_layout();
@@ -131,7 +143,18 @@ impl Scene {
                 ),
             ],
             model_render_pass,
+            camera,
+            view_proj_buffer,
         }
+    }
+
+    pub fn resize(&mut self, queue: &Queue, new_size: PhysicalSize<u32>) {
+        self.camera.set_wh_ratio(new_size);
+        queue.write_buffer(
+            &self.view_proj_buffer,
+            0,
+            cast_slice(&[self.camera.view_proj_matrix()]),
+        );
     }
 
     pub fn record_draw_commands(

@@ -20,10 +20,18 @@ unsafe impl Pod for ViewProjMat {}
 unsafe impl Zeroable for ViewProjMat {}
 
 impl ViewProjMat {
-    pub fn look_at_center(eye: Point3<f32>) -> Self {
-        let view =
-            Matrix4::look_at_rh(eye, Point3::new(0.0, 0.0, 0.0), Vector3::new(0.0, 1.0, 0.0));
-        let proj = perspective(Deg(60.0), 1.0, 0.1, 100.0);
+    pub fn look_at_center(eye: Point3<f32>, wh_ratio: f32) -> Self {
+        ViewProjMat::look_at(
+            eye,
+            Point3::new(0.0, 0.0, 0.0),
+            Vector3::new(0.0, 1.0, 0.0),
+            wh_ratio,
+        )
+    }
+
+    pub fn look_at(eye: Point3<f32>, target: Point3<f32>, up: Vector3<f32>, wh_ratio: f32) -> Self {
+        let view = Matrix4::look_at_rh(eye, target, up);
+        let proj = perspective(Deg(60.0), wh_ratio, 0.1, 100.0);
         ViewProjMat {
             data: (OPENGL_TO_WGPU_MATRIX * proj * view).into(),
         }

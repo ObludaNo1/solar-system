@@ -2,6 +2,7 @@ use app::App;
 use winit::event_loop::{ControlFlow, EventLoop};
 
 mod app;
+mod camera;
 mod matrix;
 mod model;
 mod model_render_pass;

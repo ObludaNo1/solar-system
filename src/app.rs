@@ -156,6 +156,7 @@ impl AppInner {
 
     fn resize(&mut self, new_size: PhysicalSize<u32>) {
         self.render_target.resize(&self.device, new_size);
+        self.scene.resize(&self.queue, new_size);
     }
 
     fn render(&self) -> Result<(), SurfaceError> {
