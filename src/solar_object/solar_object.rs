@@ -74,7 +74,7 @@ impl From<SolarObjectRaw> for SolarObject {
             radius_km: raw.radius_km / 10000.0,
             distance_from_parent_km: raw.avg_distance_km.unwrap_or(0.0) / 10000.0,
             orbital_period_days: raw.orbital_period_days,
-            rotation_period_days: raw.rotation_period_hours * 24.0,
+            rotation_period_days: raw.rotation_period_hours / 24.0,
             rotation_axis: raw.axis,
             texture_image,
             children: Vec::new(),
