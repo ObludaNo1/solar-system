@@ -1,0 +1,197 @@
+# Solar System definition for semi-realistic rendering
+# Distances are mean orbital distances in km
+# Orbital periods in days, rotation in hours
+# Axis given as normalized vector in parent-relative coordinates
+# Right-handed system, Y axis is "up"
+
+[[Body]]
+name = "Sun"
+type = "star"
+radius_km = 696340
+rotation_period_hours = 600.0
+axis = [0.0, 1.0, 0.0]
+texture = "2k_sun.jpg"
+
+# Mercury
+[[Body]]
+name = "Mercury"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 57910000
+orbital_period_days = 87.969
+radius_km = 2439.7
+rotation_period_hours = 1407.6
+axis = [0.0, 1.0, 0.0]
+texture = "2k_mercury.jpg"
+
+# Venus
+[[Body]]
+name = "Venus"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 108200000
+orbital_period_days = 224.701
+radius_km = 6051.8
+rotation_period_hours = -5832.5     # Retrograde
+axis = [0.0, 1.0, 0.0]
+texture = "2k_venus_atmosphere.jpg"
+
+# Earth
+[[Body]]
+name = "Earth"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 149597870
+orbital_period_days = 365.256
+radius_km = 6371
+rotation_period_hours = 23.934
+axis = [0.0, 0.9175, -0.3978]   # ~23.5° tilt
+texture = "2k_earth_daymap.jpg"
+
+[[Body]]
+name = "Moon"
+parent = "Earth"
+type = "moon"
+avg_distance_km = 384400
+orbital_period_days = 27.322
+radius_km = 1737
+rotation_period_hours = 655.728
+axis = [0.0, 1.0, 0.0]
+texture = "2k_moon.jpg"
+
+# Mars
+[[Body]]
+name = "Mars"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 227943824
+orbital_period_days = 686.971
+radius_km = 3389.5
+rotation_period_hours = 24.623
+axis = [0.0, 0.905, -0.425]    # ~25.2° tilt
+texture = "2k_mars.jpg"
+
+# Jupiter
+[[Body]]
+name = "Jupiter"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 778500000
+orbital_period_days = 4332.59
+radius_km = 69911
+rotation_period_hours = 9.925
+axis = [0.0, 0.052, -0.9986]  # ~3.1° tilt
+texture = "2k_jupiter.jpg"
+
+[[Body]]
+name = "Io"
+parent = "Jupiter"
+type = "moon"
+avg_distance_km = 421700
+orbital_period_days = 1.769
+radius_km = 1821.6
+rotation_period_hours = 42.5 # Tidal locked
+axis = [0.0, 1.0, 0.0]
+texture = "io.jpg"
+
+[[Body]]
+name = "Europa"
+parent = "Jupiter"
+type = "moon"
+avg_distance_km = 671100
+orbital_period_days = 3.551
+radius_km = 1560.8
+rotation_period_hours = 85.2 # Tidal locked
+axis = [0.0, 1.0, 0.0]
+texture = "europa.jpg"
+
+[[Body]]
+name = "Ganymede"
+parent = "Jupiter"
+type = "moon"
+avg_distance_km = 1070400
+orbital_period_days = 7.155
+radius_km = 2634.1
+rotation_period_hours = 171.7 # Tidal locked
+axis = [0.0, 1.0, 0.0]
+texture = "ganymede.jpg"
+
+[[Body]]
+name = "Callisto"
+parent = "Jupiter"
+type = "moon"
+avg_distance_km = 1882700
+orbital_period_days = 16.689
+radius_km = 2410.3
+rotation_period_hours = 400.5 # Tidal locked
+axis = [0.0, 1.0, 0.0]
+texture = "callisto.jpg"
+
+# Saturn
+[[Body]]
+name = "Saturn"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 1429400000
+orbital_period_days = 10759.22
+radius_km = 58232
+rotation_period_hours = 10.7
+axis = [0.0, 0.4383, -0.8988]  # ~26.7° tilt
+texture = "2k_saturn.jpg"
+
+[[Body]]
+name = "Titan"
+parent = "Saturn"
+type = "moon"
+avg_distance_km = 1221870
+orbital_period_days = 15.945
+radius_km = 2574.7
+rotation_period_hours = 382.7 # Tidal locked
+axis = [0.0, 1.0, 0.0]
+texture = "titan.jpg"
+
+# Uranus
+[[Body]]
+name = "Uranus"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 2870990000
+orbital_period_days = 30688.5
+radius_km = 25362
+rotation_period_hours = -17.24 # Retrograde
+axis = [0.0, -0.9994, -0.0349] # ~97.8° tilt
+texture = "2k_uranus.jpg"
+
+[[Body]]
+name = "Titania"
+parent = "Uranus"
+type = "moon"
+avg_distance_km = 436300
+orbital_period_days = 8.706
+radius_km = 788.9
+rotation_period_hours = 208.9 # Tidal locked
+axis = [0.0, 1.0, 0.0]
+texture = "titania.jpg"
+
+# Neptune
+[[Body]]
+name = "Neptune"
+parent = "Sun"
+type = "planet"
+avg_distance_km = 4504300000
+orbital_period_days = 60182
+radius_km = 24622
+rotation_period_hours = 16.11
+axis = [0.0, 0.917, -0.398]   # ~28.3° tilt
+texture = "2k_neptune.jpg"
+
+[[Body]]
+name = "Triton"
+parent = "Neptune"
+type = "moon"
+avg_distance_km = 354800
+orbital_period_days = -5.877  # Retrograde orbit
+radius_km = 1353.4
+rotation_period_hours = 141.0 # Tidal locked
+axis = [0.0, -1.0, 0.0]
+texture = "triton.jpg"

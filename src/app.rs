@@ -4,6 +4,7 @@ use std::{
     time::Instant,
 };
 
+use cgmath::{InnerSpace, Point3, Vector3};
 use wgpu::*;
 use winit::{
     application::ApplicationHandler,
@@ -18,6 +19,7 @@ use crate::{
     camera::{camera_control::CameraControl, movement_control::MovementControl},
     render_target::RenderTargetConfig,
     scene::Scene,
+    solar_object::solar_object::load_solar_objects,
 };
 
 pub struct App {
@@ -172,7 +174,10 @@ impl AppInner {
         let render_target =
             RenderTargetConfig::new(window.inner_size(), &device, surface, &adapter)?;
 
-        let camera_control = Arc::new(Mutex::new(CameraControl::default()));
+        let camera_control = Arc::new(Mutex::new(CameraControl::new(
+            Point3::new(0.0, 1000.0, -2000.0),
+            Vector3::new(0.0, -1.0, 2.0).normalize(),
+        )));
         let movement_control = MovementControl::new(camera_control.clone(), {
             let window = window.clone();
             move |dragging| {
@@ -199,6 +204,7 @@ impl AppInner {
             &render_target,
             Instant::now(),
             camera_control.clone(),
+            load_solar_objects("data/definitions.toml"),
         );
 
         Ok(AppInner {

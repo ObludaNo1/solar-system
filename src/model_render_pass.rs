@@ -167,11 +167,11 @@ impl ModelRenderPass {
         }
     }
 
-    pub fn record_draw_commands(
+    pub fn record_draw_commands<'a>(
         &self,
         encoder: &mut CommandEncoder,
         render_target: &RenderTarget,
-        models: &[SceneModel],
+        models: impl Iterator<Item = &'a SceneModel>,
     ) {
         let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
             label: Some("Render Pass"),

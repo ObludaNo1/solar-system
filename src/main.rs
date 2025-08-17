@@ -8,6 +8,7 @@ mod model;
 mod model_render_pass;
 mod render_target;
 mod scene;
+mod solar_object;
 mod texture;
 
 pub async fn run() {

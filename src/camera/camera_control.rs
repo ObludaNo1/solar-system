@@ -115,6 +115,14 @@ pub struct CameraControl {
 }
 
 impl CameraControl {
+    pub fn new(position: Point3<f32>, view_direction: Vector3<f32>) -> Self {
+        Self {
+            position,
+            view_direction,
+            movements: Movements::default(),
+        }
+    }
+
     /// Integrates all movement changes based on current time and returns the resulting view matrix.
     pub fn snapshot(&mut self, now: Instant) -> Matrix4<f32> {
         self.materialize_movements(now);
