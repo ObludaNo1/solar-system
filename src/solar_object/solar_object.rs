@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, hash::RandomState};
+use std::{collections::HashMap, f64::consts::PI, fs, hash::RandomState};
 
 use image::DynamicImage;
 use serde::Deserialize;
@@ -10,7 +10,7 @@ pub struct SolarObject {
     pub distance_from_parent_km: f64,
     pub orbital_period_days: Option<f64>,
     pub rotation_period_days: f64,
-    pub rotation_axis: [f64; 3],
+    pub tilt: f64,
     pub texture_image: DynamicImage,
     pub children: Vec<SolarObject>,
 }
@@ -29,7 +29,7 @@ struct SolarObjectRaw {
     avg_distance_km: Option<f64>,
     orbital_period_days: Option<f64>,
     rotation_period_hours: f64,
-    axis: [f64; 3],
+    tilt: f64,
     texture: String, // Path to image
 }
 
@@ -75,7 +75,7 @@ impl From<SolarObjectRaw> for SolarObject {
             distance_from_parent_km: raw.avg_distance_km.unwrap_or(0.0) / 10000.0,
             orbital_period_days: raw.orbital_period_days,
             rotation_period_days: raw.rotation_period_hours / 24.0,
-            rotation_axis: raw.axis,
+            tilt: raw.tilt * PI / 180.0,
             texture_image,
             children: Vec::new(),
         }

@@ -30,7 +30,7 @@ pub struct RenderSolarObject {
     pub distance_from_parent_km: f64,
     pub orbital_period_days: Option<f64>,
     pub rotation_period_days: f64,
-    pub rotation_axis: Vector3<f32>,
+    pub tilt: f64,
     pub children: Vec<RenderSolarObject>,
     pub scene_model: SceneModel,
 }
@@ -40,7 +40,7 @@ struct SolarObjectInner {
     distance_from_parent_km: f64,
     orbital_period_days: Option<f64>,
     rotation_period_days: f64,
-    rotation_axis: [f64; 3],
+    tilt: f64,
     texture_image: Option<DynamicImage>,
     children: Vec<SolarObjectInner>,
 }
@@ -52,7 +52,7 @@ impl SolarObjectInner {
             distance_from_parent_km: solar_object.distance_from_parent_km,
             orbital_period_days: solar_object.orbital_period_days,
             rotation_period_days: solar_object.rotation_period_days,
-            rotation_axis: solar_object.rotation_axis,
+            tilt: solar_object.tilt,
             texture_image: Some(solar_object.texture_image),
             children: solar_object
                 .children
@@ -101,7 +101,7 @@ impl RenderSolarObject {
             distance_from_parent_km: solar_object.distance_from_parent_km,
             orbital_period_days: solar_object.orbital_period_days,
             rotation_period_days: solar_object.rotation_period_days,
-            rotation_axis: solar_object.rotation_axis.map(|v| v as f32).into(),
+            tilt: solar_object.tilt,
             children: solar_object
                 .children
                 .into_iter()
@@ -137,9 +137,10 @@ impl RenderSolarObject {
         parent_radius: Option<f32>,
     ) {
         let rotate = Matrix::rotate(
-            self.rotation_axis,
+            UP,
             time_scaling(PI * 2.0 * time.as_secs_f64() / self.rotation_period_days),
         );
+        let tilt = Matrix::rotate(Vector3::unit_x(), self.tilt as f32);
         let translate = Matrix::translate(Vector3 {
             x: distance_scaling(self.distance_from_parent_km)
                 + parent_radius
@@ -156,8 +157,12 @@ impl RenderSolarObject {
         } else {
             Matrix::identity()
         };
-        let model_matrix =
-            parent_matrix * orbit * translate * rotate * *self.scene_model.model.model_matrix();
+        let model_matrix = parent_matrix
+            * orbit
+            * translate
+            * tilt
+            * rotate
+            * *self.scene_model.model.model_matrix();
         queue.write_buffer(
             &self.scene_model.model_buffer,
             0,
