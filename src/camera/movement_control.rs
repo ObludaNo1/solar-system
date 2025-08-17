@@ -31,6 +31,7 @@ impl MovementControl {
                     KeyEvent {
                         physical_key: PhysicalKey::Code(key),
                         state,
+                        repeat: false,
                         ..
                     },
                 ..

@@ -91,7 +91,7 @@ impl MovementDirection {
 
 fn ms_map(duration: Duration) -> f32 {
     // map duration to seconds
-    duration.as_secs_f32()
+    duration.as_secs_f32().powf(1.5)
 }
 
 /// Camera control struct.
