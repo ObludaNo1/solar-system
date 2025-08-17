@@ -175,7 +175,7 @@ impl AppInner {
             RenderTargetConfig::new(window.inner_size(), &device, surface, &adapter)?;
 
         let camera_control = Arc::new(Mutex::new(CameraControl::new(
-            Point3::new(0.0, 1000.0, -2000.0),
+            Point3::new(0.0, 100.0, -200.0),
             Vector3::new(0.0, -1.0, 2.0).normalize(),
         )));
         let movement_control = MovementControl::new(camera_control.clone(), {

@@ -17,11 +17,11 @@ use crate::{
 /// This function makes things in solar system reasonably in vision range. Otherwise all bodies are
 /// so far they are not visible.
 pub fn distance_scaling(distance: f64) -> f32 {
-    (distance / 10000.0).powf(0.5) as f32
+    (distance / 100000.0).powf(0.6) as f32
 }
 
 pub fn radius_scaling(radius: f64) -> f32 {
-    (radius / 10000.0).powf(0.5) as f32
+    (radius / 10000.0).powf(0.4) as f32
 }
 
 pub fn time_scaling(time: f64) -> f32 {
