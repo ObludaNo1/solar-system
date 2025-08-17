@@ -9,6 +9,7 @@ use crate::{
     texture::texture::TextureBindGroupDescriptor,
 };
 
+#[derive(Debug)]
 pub struct ModelRenderPass {
     render_pipeline: RenderPipeline,
     view_proj_bind_group: BindGroup,

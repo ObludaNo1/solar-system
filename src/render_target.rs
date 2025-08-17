@@ -1,6 +1,7 @@
 use wgpu::*;
 use winit::dpi::PhysicalSize;
 
+#[derive(Debug)]
 pub struct RenderTargetConfig<'window> {
     surface: Surface<'window>,
     config: SurfaceConfiguration,

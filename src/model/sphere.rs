@@ -7,7 +7,7 @@ use wgpu::{
 };
 
 use crate::{
-    matrix::model_mat::ModelMat,
+    matrix::Matrix,
     texture::texture::{RgbaTexture, TextureBindGroupDescriptor},
 };
 
@@ -69,7 +69,7 @@ pub fn create_sphere(
     radius: f32,
     lat_segments: u32,
     long_segments: u32,
-    model_matrix: ModelMat,
+    model_matrix: Matrix,
 ) -> Model {
     let (vertices, indices) = generate_buffers(radius, lat_segments, long_segments);
 

@@ -1,6 +1,7 @@
 use image::DynamicImage;
 use wgpu::*;
 
+#[derive(Debug)]
 pub struct RgbaTexture {
     #[allow(unused)]
     pub texture: Texture,

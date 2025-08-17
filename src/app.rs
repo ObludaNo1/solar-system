@@ -1,16 +1,24 @@
-use std::{iter::once, sync::Arc};
+use std::{
+    iter::once,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use wgpu::*;
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
-    event::{ElementState, KeyEvent, WindowEvent},
+    event::{DeviceEvent, DeviceId, ElementState, KeyEvent, WindowEvent},
     event_loop::ActiveEventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowId},
 };
 
-use crate::{render_target::RenderTargetConfig, scene::Scene};
+use crate::{
+    camera::{camera_control::CameraControl, movement_control::MovementControl},
+    render_target::RenderTargetConfig,
+    scene::Scene,
+};
 
 pub struct App {
     inner: Option<AppInner>,
@@ -27,8 +35,8 @@ impl App {
         }
     }
 
-    fn render(&self) -> Result<(), SurfaceError> {
-        if let Some(ref inner) = self.inner {
+    fn render(&mut self) -> Result<(), SurfaceError> {
+        if let Some(ref mut inner) = self.inner {
             inner.render()
         } else {
             Ok(())
@@ -99,18 +107,39 @@ impl ApplicationHandler for App {
                     }
                 }
             }
-            // ignore other events like mouse events, keyboard events, etc
-            _ => {}
+            // ignore other events
+            _ => {
+                if let Some(ref mut inner) = self.inner {
+                    inner.movement_control.process_window_event(event);
+                } else {
+                    eprintln!("Inner app is not initialized");
+                }
+            }
+        }
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: DeviceId,
+        event: DeviceEvent,
+    ) {
+        if let Some(ref mut inner) = self.inner {
+            inner.movement_control.process_device_event(event);
+        } else {
+            eprintln!("Inner app is not initialized");
         }
     }
 }
 
+#[derive(Debug)]
 struct AppInner {
     window: Arc<Window>,
     device: Device,
     render_target: RenderTargetConfig<'static>,
     queue: Queue,
     scene: Scene,
+    movement_control: MovementControl,
 }
 
 impl AppInner {
@@ -143,7 +172,16 @@ impl AppInner {
         let render_target =
             RenderTargetConfig::new(window.inner_size(), &device, surface, &adapter)?;
 
-        let scene = Scene::new(&device, &queue, &render_target);
+        let camera_control = Arc::new(Mutex::new(CameraControl::default()));
+        let movement_control = MovementControl::new(camera_control.clone());
+
+        let scene = Scene::new(
+            &device,
+            &queue,
+            &render_target,
+            Instant::now(),
+            camera_control.clone(),
+        );
 
         Ok(AppInner {
             window,
@@ -151,15 +189,16 @@ impl AppInner {
             render_target,
             queue,
             scene,
+            movement_control,
         })
     }
 
     fn resize(&mut self, new_size: PhysicalSize<u32>) {
         self.render_target.resize(&self.device, new_size);
-        self.scene.resize(&self.queue, new_size);
+        self.scene.resize(&self.queue, new_size, Instant::now());
     }
 
-    fn render(&self) -> Result<(), SurfaceError> {
+    fn render(&mut self) -> Result<(), SurfaceError> {
         let render_target = self.render_target.next_frame()?;
 
         let mut encoder = self
@@ -168,8 +207,10 @@ impl AppInner {
                 label: Some("Render Encoder"),
             });
 
+        self.scene.update_buffers(&self.queue, Instant::now());
+
         self.scene
-            .record_draw_commands(&self.queue, &mut encoder, &render_target);
+            .record_draw_commands(&mut encoder, &render_target);
 
         self.queue.submit(once(encoder.finish()));
         render_target.present();

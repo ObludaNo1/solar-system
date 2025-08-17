@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::*;
 
-use crate::{matrix::model_mat::ModelMat, texture::texture::RgbaTexture};
+use crate::{matrix::Matrix, texture::texture::RgbaTexture};
 
 pub mod sphere;
 // pub mod sprite;
@@ -37,16 +37,18 @@ impl Vertex {
     }
 }
 
+#[derive(Debug)]
 pub struct Mesh {
     vertex_buffer: Buffer,
     index_buffer: Buffer,
 }
 
+#[derive(Debug)]
 pub struct Model {
     #[allow(unused)]
     texture: RgbaTexture,
     texture_bind_group: BindGroup,
-    model_matrix: ModelMat,
+    model_matrix: Matrix,
     meshes: Vec<Mesh>,
 }
 
@@ -56,6 +58,7 @@ pub struct ModelBindGroupDescriptor<'a> {
     pub binding: u32,
 }
 
+#[derive(Debug)]
 pub struct MeshBuffers<'a> {
     pub texture_bind_group: &'a BindGroup,
     pub vertex_buffer: BufferSlice<'a>,
@@ -64,7 +67,7 @@ pub struct MeshBuffers<'a> {
 }
 
 impl<'a> Model {
-    pub fn model_matrix(&self) -> &ModelMat {
+    pub fn model_matrix(&self) -> &Matrix {
         &self.model_matrix
     }
 

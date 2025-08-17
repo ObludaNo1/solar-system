@@ -1,4 +1,7 @@
-use std::time::SystemTime;
+use std::{
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use bytemuck::cast_slice;
 use cgmath::Vector3;
@@ -10,14 +13,15 @@ use wgpu::{
 use winit::dpi::PhysicalSize;
 
 use crate::{
-    camera::Camera,
-    matrix::model_mat::ModelMat,
+    camera::{camera::Camera, camera_control::CameraControl, projection::Projection},
+    matrix::Matrix,
     model::{Model, ModelBindGroupDescriptor, sphere::create_sphere},
     model_render_pass::ModelRenderPass,
     render_target::{RenderTarget, RenderTargetConfig},
     texture::texture::RgbaTexture,
 };
 
+#[derive(Debug)]
 pub struct SceneModel {
     pub model: Model,
     pub model_buffer: Buffer,
@@ -29,7 +33,7 @@ impl SceneModel {
         let model_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("model buffer"),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            contents: cast_slice(&[ModelMat::identity()]),
+            contents: cast_slice(&[Matrix::identity()]),
         });
         let model_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("model bind group"),
@@ -47,8 +51,9 @@ impl SceneModel {
     }
 }
 
+#[derive(Debug)]
 pub struct Scene {
-    init_time: SystemTime,
+    init_time: Instant,
     model_render_pass: ModelRenderPass,
     models: Vec<SceneModel>,
     camera: Camera,
@@ -56,9 +61,15 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(device: &Device, queue: &Queue, render_target: &RenderTargetConfig) -> Scene {
-        let camera = Camera::default();
-        let view_proj_mat = camera.view_proj_matrix();
+    pub fn new(
+        device: &Device,
+        queue: &Queue,
+        render_target: &RenderTargetConfig,
+        now: Instant,
+        camera_control: Arc<Mutex<CameraControl>>,
+    ) -> Scene {
+        let mut camera = Camera::new(camera_control, Projection::default());
+        let view_proj_mat = camera.view_proj_matrix(now);
         let view_proj_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("view-proj buffer"),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
@@ -71,7 +82,7 @@ impl Scene {
         let model_layout = model_render_pass.model_layout();
 
         Scene {
-            init_time: SystemTime::now(),
+            init_time: now,
             models: vec![
                 SceneModel::new(
                     device,
@@ -89,7 +100,7 @@ impl Scene {
                         0.5,
                         16,
                         32,
-                        ModelMat::identity(),
+                        Matrix::identity(),
                     ),
                     &model_layout,
                 ),
@@ -109,7 +120,7 @@ impl Scene {
                         0.5,
                         16,
                         32,
-                        ModelMat::scale(Vector3 {
+                        Matrix::scale(Vector3 {
                             x: 1.0,
                             y: 1.5,
                             z: 0.8,
@@ -133,7 +144,7 @@ impl Scene {
                         0.5,
                         16,
                         32,
-                        ModelMat::translate(Vector3 {
+                        Matrix::translate(Vector3 {
                             x: 0.5,
                             y: 0.0,
                             z: 0.0,
@@ -148,40 +159,40 @@ impl Scene {
         }
     }
 
-    pub fn resize(&mut self, queue: &Queue, new_size: PhysicalSize<u32>) {
-        self.camera.set_wh_ratio(new_size);
+    pub fn resize(&mut self, queue: &Queue, new_size: PhysicalSize<u32>, now: Instant) {
+        self.camera.resize(new_size);
         queue.write_buffer(
             &self.view_proj_buffer,
             0,
-            cast_slice(&[self.camera.view_proj_matrix()]),
+            cast_slice(&[self.camera.view_proj_matrix(now)]),
         );
     }
 
-    pub fn record_draw_commands(
-        &self,
-        queue: &Queue,
-        encoder: &mut CommandEncoder,
-        render_target: &RenderTarget,
-    ) {
-        let rotation = SystemTime::now()
-            .duration_since(self.init_time)
-            .expect("current time is larger than UNIX EPOCH")
-            .as_secs_f64() as f32;
+    pub fn update_buffers(&mut self, queue: &Queue, now: Instant) {
+        queue.write_buffer(
+            &self.view_proj_buffer,
+            0,
+            cast_slice(&[self.camera.view_proj_matrix(now)]),
+        );
+
+        let rotation = (now - self.init_time).as_secs_f32();
 
         for (i, scene_model) in self.models.iter().enumerate() {
-            let translate = ModelMat::translate(Vector3 {
+            let translate = Matrix::translate(Vector3 {
                 x: 0.0,
                 y: 0.0,
                 z: i as f32 * 1.0,
             });
-            let rotate = ModelMat::rotate(Vector3::unit_y(), rotation * (i as f32 + 0.3));
+            let rotate = Matrix::rotate(Vector3::unit_y(), rotation * (i as f32 + 0.3));
             queue.write_buffer(
                 &scene_model.model_buffer,
                 0,
-                bytemuck::cast_slice(&[translate * rotate * *scene_model.model.model_matrix()]),
+                cast_slice(&[translate * rotate * *scene_model.model.model_matrix()]),
             );
         }
+    }
 
+    pub fn record_draw_commands(&self, encoder: &mut CommandEncoder, render_target: &RenderTarget) {
         self.model_render_pass
             .record_draw_commands(encoder, render_target, &self.models);
     }
