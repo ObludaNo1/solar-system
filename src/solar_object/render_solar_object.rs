@@ -17,7 +17,11 @@ use crate::{
 /// This function makes things in solar system reasonably in vision range. Otherwise all bodies are
 /// so far they are not visible.
 pub fn distance_scaling(distance: f64) -> f32 {
-    distance.powf(0.5) as f32
+    (distance / 10000.0).powf(0.5) as f32
+}
+
+pub fn radius_scaling(radius: f64) -> f32 {
+    (radius / 10000.0).powf(0.5) as f32
 }
 
 pub fn time_scaling(time: f64) -> f32 {
@@ -95,7 +99,6 @@ impl RenderSolarObject {
                 .take()
                 .expect("Texture is present"),
         );
-        let r = solar_object.radius_km as f32;
         Self {
             radius_km: solar_object.radius_km,
             distance_from_parent_km: solar_object.distance_from_parent_km,
@@ -118,7 +121,7 @@ impl RenderSolarObject {
                     1.0,
                     64,
                     128,
-                    Matrix::scale(Vector3::new(r, r, r)),
+                    Matrix::identity(),
                 ),
                 model_layout,
             ),
@@ -136,6 +139,8 @@ impl RenderSolarObject {
         parent_matrix: Matrix,
         parent_radius: Option<f32>,
     ) {
+        let scale = radius_scaling(self.radius_km);
+        let scale = Matrix::scale(Vector3::new(scale, scale, scale));
         let rotate = Matrix::rotate(
             UP,
             time_scaling(PI * 2.0 * time.as_secs_f64() / self.rotation_period_days),
@@ -144,7 +149,7 @@ impl RenderSolarObject {
         let translate = Matrix::translate(Vector3 {
             x: distance_scaling(self.distance_from_parent_km)
                 + parent_radius
-                    .map(|r| r + self.radius_km as f32)
+                    .map(|r| radius_scaling(r as f64) + radius_scaling(self.radius_km))
                     .unwrap_or(0.0),
             y: 0.0,
             z: 0.0,
@@ -162,6 +167,7 @@ impl RenderSolarObject {
             * translate
             * tilt
             * rotate
+            * scale
             * *self.scene_model.model.model_matrix();
         queue.write_buffer(
             &self.scene_model.model_buffer,
