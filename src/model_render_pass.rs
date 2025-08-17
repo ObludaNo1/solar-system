@@ -1,5 +1,3 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use wgpu::*;
 
 use crate::{
@@ -180,15 +178,9 @@ impl ModelRenderPass {
                 resolve_target: None,
                 ops: Operations {
                     load: LoadOp::Clear(Color {
-                        r: SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("current time is larger than UNIX EPOCH")
-                            .as_secs_f64()
-                            .sin()
-                            * 0.5
-                            + 0.5,
-                        g: 0.2,
-                        b: 0.3,
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
                         a: 1.0,
                     }),
                     store: StoreOp::Store,
