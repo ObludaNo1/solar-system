@@ -11,7 +11,7 @@ use winit::{
     event::{DeviceEvent, DeviceId, ElementState, KeyEvent, WindowEvent},
     event_loop::ActiveEventLoop,
     keyboard::{KeyCode, PhysicalKey},
-    window::{Window, WindowId},
+    window::{CursorGrabMode, Window, WindowId},
 };
 
 use crate::{
@@ -173,7 +173,25 @@ impl AppInner {
             RenderTargetConfig::new(window.inner_size(), &device, surface, &adapter)?;
 
         let camera_control = Arc::new(Mutex::new(CameraControl::default()));
-        let movement_control = MovementControl::new(camera_control.clone());
+        let movement_control = MovementControl::new(camera_control.clone(), {
+            let window = window.clone();
+            move |dragging| {
+                if dragging {
+                    match window
+                        .set_cursor_grab(CursorGrabMode::Locked)
+                        .or_else(|_e| window.set_cursor_grab(CursorGrabMode::Confined))
+                    {
+                        Ok(()) => window.set_cursor_visible(false),
+                        Err(e) => eprintln!("Failed to grab cursor: {}", e),
+                    }
+                } else {
+                    window
+                        .set_cursor_grab(CursorGrabMode::None)
+                        .expect("Releasing cursor grab cannot fail");
+                    window.set_cursor_visible(true);
+                }
+            }
+        });
 
         let scene = Scene::new(
             &device,

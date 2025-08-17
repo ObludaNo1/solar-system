@@ -1,4 +1,5 @@
 use std::{
+    fmt::Debug,
     sync::{Arc, Mutex},
     time::Instant,
 };
@@ -10,17 +11,21 @@ use winit::{
 
 use crate::camera::camera_control::{CameraControl, MovementDirection};
 
-#[derive(Debug)]
 pub struct MovementControl {
     camera_control: Arc<Mutex<CameraControl>>,
     mouse_pressed: bool,
+    mouse_dragged_fn: Box<dyn Fn(bool)>,
 }
 
 impl MovementControl {
-    pub fn new(camera_control: Arc<Mutex<CameraControl>>) -> Self {
+    pub fn new(
+        camera_control: Arc<Mutex<CameraControl>>,
+        mouse_dragged_fn: impl Fn(bool) + 'static,
+    ) -> Self {
         MovementControl {
             camera_control,
             mouse_pressed: false,
+            mouse_dragged_fn: Box::new(mouse_dragged_fn),
         }
     }
 
@@ -75,9 +80,11 @@ impl MovementControl {
             WindowEvent::MouseInput { state, button, .. } => match (state, button) {
                 (ElementState::Pressed, MouseButton::Right) => {
                     self.mouse_pressed = true;
+                    (self.mouse_dragged_fn)(true);
                 }
                 (ElementState::Released, MouseButton::Right) => {
                     self.mouse_pressed = false;
+                    (self.mouse_dragged_fn)(false);
                 }
                 _ => {}
             },
@@ -100,5 +107,13 @@ impl MovementControl {
             }
             _ => {}
         }
+    }
+}
+
+impl Debug for MovementControl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MovementControl")
+            .field("mouse_pressed", &self.mouse_pressed)
+            .finish()
     }
 }
