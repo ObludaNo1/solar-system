@@ -91,6 +91,30 @@ impl Scene {
                         RgbaTexture::from_image(
                             device,
                             queue,
+                            ImageReader::open("resources/2k_sun.jpg")
+                                .unwrap()
+                                .decode()
+                                .unwrap(),
+                        ),
+                        texture_layout,
+                        0.5,
+                        16,
+                        32,
+                        Matrix::scale(Vector3 {
+                            x: 695.7,
+                            y: 695.7,
+                            z: 695.7,
+                        }),
+                    ),
+                    &model_layout,
+                ),
+                SceneModel::new(
+                    device,
+                    create_sphere(
+                        device,
+                        RgbaTexture::from_image(
+                            device,
+                            queue,
                             ImageReader::open("resources/2k_earth_daymap.jpg")
                                 .unwrap()
                                 .decode()
@@ -100,7 +124,11 @@ impl Scene {
                         0.5,
                         16,
                         32,
-                        Matrix::identity(),
+                        Matrix::scale(Vector3 {
+                            x: 6.378,
+                            y: 6.356,
+                            z: 6.378,
+                        }),
                     ),
                     &model_layout,
                 ),
@@ -121,33 +149,9 @@ impl Scene {
                         16,
                         32,
                         Matrix::scale(Vector3 {
-                            x: 1.0,
-                            y: 1.5,
-                            z: 0.8,
-                        }),
-                    ),
-                    &model_layout,
-                ),
-                SceneModel::new(
-                    device,
-                    create_sphere(
-                        device,
-                        RgbaTexture::from_image(
-                            device,
-                            queue,
-                            ImageReader::open("resources/2k_haumea_fictional.jpg")
-                                .unwrap()
-                                .decode()
-                                .unwrap(),
-                        ),
-                        texture_layout,
-                        0.5,
-                        16,
-                        32,
-                        Matrix::translate(Vector3 {
-                            x: 0.5,
-                            y: 0.0,
-                            z: 0.0,
+                            x: 3.396,
+                            y: 3.376,
+                            z: 3.396,
                         }),
                     ),
                     &model_layout,
