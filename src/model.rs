@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use wgpu::*;
 
-use crate::{matrix::Matrix, texture::texture::RgbaTexture};
+use crate::{matrix::Matrix4x4, texture::texture::RgbaTexture};
 
 pub mod sphere;
 // pub mod sprite;
@@ -11,6 +11,7 @@ pub mod sphere;
 pub struct Vertex {
     position: [f32; 3],
     tex_coords: [f32; 2],
+    normal: [f32; 3],
 }
 
 unsafe impl Pod for Vertex {}
@@ -32,6 +33,11 @@ impl Vertex {
                     shader_location: 1,
                     format: VertexFormat::Float32x2,
                 },
+                VertexAttribute {
+                    offset: size_of::<[f32; 5]>() as BufferAddress,
+                    shader_location: 2,
+                    format: VertexFormat::Float32x3,
+                },
             ],
         }
     }
@@ -48,14 +54,15 @@ pub struct Model {
     #[allow(unused)]
     texture: RgbaTexture,
     texture_bind_group: BindGroup,
-    model_matrix: Matrix,
+    model_matrix: Matrix4x4,
     meshes: Vec<Mesh>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ModelBindGroupDescriptor<'a> {
+pub struct ModelNormalBindGroupDescriptor<'a> {
     pub layout: &'a BindGroupLayout,
-    pub binding: u32,
+    pub model_binding: u32,
+    pub normal_binding: u32,
 }
 
 #[derive(Debug)]
@@ -67,7 +74,7 @@ pub struct MeshBuffers<'a> {
 }
 
 impl<'a> Model {
-    pub fn model_matrix(&self) -> &Matrix {
+    pub fn model_matrix(&self) -> &Matrix4x4 {
         &self.model_matrix
     }
 

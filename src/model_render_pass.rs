@@ -1,7 +1,7 @@
 use wgpu::*;
 
 use crate::{
-    model::{MeshBuffers, ModelBindGroupDescriptor, Vertex},
+    model::{MeshBuffers, ModelNormalBindGroupDescriptor, Vertex},
     render_target::{RenderTarget, RenderTargetConfig},
     scene::SceneModel,
     texture::texture::TextureBindGroupDescriptor,
@@ -11,8 +11,8 @@ use crate::{
 pub struct ModelRenderPass {
     render_pipeline: RenderPipeline,
     view_proj_bind_group: BindGroup,
+    model_normal_mat_layout: BindGroupLayout,
     texture_bind_group_layout: BindGroupLayout,
-    matrix_bind_group_layout: BindGroupLayout,
 }
 
 impl ModelRenderPass {
@@ -21,21 +21,25 @@ impl ModelRenderPass {
         render_target: &RenderTargetConfig,
         view_proj_buffer: &Buffer,
     ) -> ModelRenderPass {
-        // define, how the uniforms look like
-        let matrix_bind_group_layout =
-            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("matrix 4x4 layout"),
-                entries: &[BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::VERTEX,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
+        let vertex_bind_group_entry = |binding: u32| BindGroupLayoutEntry {
+            binding,
+            visibility: ShaderStages::VERTEX,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        };
+        let view_proj_mat_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("view-proj layout"),
+            entries: &[vertex_bind_group_entry(0)],
+        });
+
+        let model_normal_mat_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("model-normal layout"),
+            entries: &[vertex_bind_group_entry(0), vertex_bind_group_entry(1)],
+        });
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -62,7 +66,7 @@ impl ModelRenderPass {
 
         let view_proj_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("view-proj bind group"),
-            layout: &matrix_bind_group_layout,
+            layout: &view_proj_mat_layout,
             entries: &[BindGroupEntry {
                 binding: 0,
                 resource: view_proj_buffer.as_entire_binding(),
@@ -72,8 +76,10 @@ impl ModelRenderPass {
         let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[
-                &matrix_bind_group_layout,
-                &matrix_bind_group_layout,
+                // view-projection matrix
+                &view_proj_mat_layout,
+                // model and normal matrix
+                &model_normal_mat_layout,
                 &texture_bind_group_layout,
             ],
             push_constant_ranges: &[],
@@ -145,7 +151,7 @@ impl ModelRenderPass {
         ModelRenderPass {
             render_pipeline,
             view_proj_bind_group,
-            matrix_bind_group_layout,
+            model_normal_mat_layout,
             texture_bind_group_layout,
         }
     }
@@ -158,10 +164,11 @@ impl ModelRenderPass {
         }
     }
 
-    pub fn model_layout(&self) -> ModelBindGroupDescriptor<'_> {
-        ModelBindGroupDescriptor {
-            layout: &self.matrix_bind_group_layout,
-            binding: 0,
+    pub fn model_normal_matrix_layout(&self) -> ModelNormalBindGroupDescriptor<'_> {
+        ModelNormalBindGroupDescriptor {
+            layout: &self.model_normal_mat_layout,
+            model_binding: 0,
+            normal_binding: 1,
         }
     }
 

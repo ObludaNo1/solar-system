@@ -7,7 +7,7 @@ use winit::dpi::PhysicalSize;
 
 use crate::{
     camera::{camera_control::CameraControl, projection::Projection},
-    matrix::Matrix,
+    matrix::Matrix4x4,
 };
 
 #[derive(Debug, Clone)]
@@ -28,8 +28,8 @@ impl Camera {
         self.projection.resize(new_size);
     }
 
-    pub fn view_proj_matrix(&mut self, now: Instant) -> Matrix {
-        Matrix::view_proj(
+    pub fn view_proj_matrix(&mut self, now: Instant) -> Matrix4x4 {
+        Matrix4x4::view_proj(
             self.camera_control.lock().unwrap().snapshot(now),
             self.projection.matrix(),
         )

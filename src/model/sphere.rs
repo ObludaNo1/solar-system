@@ -7,7 +7,7 @@ use wgpu::{
 };
 
 use crate::{
-    matrix::Matrix,
+    matrix::Matrix4x4,
     texture::texture::{RgbaTexture, TextureBindGroupDescriptor},
 };
 
@@ -27,16 +27,17 @@ fn generate_buffers(radius: f32, lat_segments: u32, long_segments: u32) -> (Vec<
             let sin_phi = phi.sin();
             let cos_phi = phi.cos();
 
-            let px = radius * sin_theta * cos_phi;
-            let py = radius * cos_theta;
-            let pz = radius * sin_theta * sin_phi;
+            let px = sin_theta * cos_phi;
+            let py = cos_theta;
+            let pz = sin_theta * sin_phi;
 
             vertices.push(Vertex {
-                position: [px, py, pz],
+                position: [px * radius, py * radius, pz * radius],
                 tex_coords: [
                     x as f32 / long_segments as f32,
                     y as f32 / lat_segments as f32,
                 ],
+                normal: [px, py, pz],
             });
         }
     }
@@ -69,7 +70,7 @@ pub fn create_sphere(
     radius: f32,
     lat_segments: u32,
     long_segments: u32,
-    model_matrix: Matrix,
+    model_matrix: Matrix4x4,
 ) -> Model {
     let (vertices, indices) = generate_buffers(radius, lat_segments, long_segments);
 

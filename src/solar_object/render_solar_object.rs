@@ -7,8 +7,8 @@ use wgpu::*;
 
 use crate::{
     camera::camera_control::UP,
-    matrix::Matrix,
-    model::{ModelBindGroupDescriptor, sphere::create_sphere},
+    matrix::{Matrix3x3, Matrix4x4},
+    model::{ModelNormalBindGroupDescriptor, sphere::create_sphere},
     scene::SceneModel,
     solar_object::solar_object::SolarObject,
     texture::texture::{RgbaTexture, TextureBindGroupDescriptor},
@@ -72,14 +72,14 @@ impl RenderSolarObject {
         solar_object: SolarObject,
         queue: &Queue,
         device: &Device,
-        model_layout: ModelBindGroupDescriptor,
+        model_normal_matrix_layout: ModelNormalBindGroupDescriptor,
         texture_layout: TextureBindGroupDescriptor,
     ) -> Self {
         RenderSolarObject::new_inner(
             SolarObjectInner::new(solar_object),
             queue,
             device,
-            model_layout,
+            model_normal_matrix_layout,
             texture_layout,
         )
     }
@@ -88,7 +88,7 @@ impl RenderSolarObject {
         mut solar_object: SolarObjectInner,
         queue: &Queue,
         device: &Device,
-        model_layout: ModelBindGroupDescriptor,
+        model_normal_matrix_layout: ModelNormalBindGroupDescriptor,
         texture_layout: TextureBindGroupDescriptor,
     ) -> Self {
         let texture = RgbaTexture::from_image(
@@ -109,7 +109,13 @@ impl RenderSolarObject {
                 .children
                 .into_iter()
                 .map(|child| {
-                    RenderSolarObject::new_inner(child, queue, device, model_layout, texture_layout)
+                    RenderSolarObject::new_inner(
+                        child,
+                        queue,
+                        device,
+                        model_normal_matrix_layout,
+                        texture_layout,
+                    )
                 })
                 .collect(),
             scene_model: SceneModel::new(
@@ -121,32 +127,32 @@ impl RenderSolarObject {
                     1.0,
                     64,
                     128,
-                    Matrix::identity(),
+                    Matrix4x4::identity(),
                 ),
-                model_layout,
+                model_normal_matrix_layout,
             ),
         }
     }
 
     pub fn update_buffers(&self, time: Duration, queue: &Queue) {
-        self.update_buffers_inner(time, queue, Matrix::identity(), None);
+        self.update_buffers_inner(time, queue, Matrix4x4::identity(), None);
     }
 
     fn update_buffers_inner(
         &self,
         time: Duration,
         queue: &Queue,
-        parent_matrix: Matrix,
+        parent_matrix: Matrix4x4,
         parent_radius: Option<f32>,
     ) {
         let scale = radius_scaling(self.radius_km);
-        let scale = Matrix::scale(Vector3::new(scale, scale, scale));
-        let rotate = Matrix::rotate(
+        let scale = Matrix4x4::scale(Vector3::new(scale, scale, scale));
+        let rotate = Matrix4x4::rotate(
             UP,
             time_scaling(PI * 2.0 * time.as_secs_f64() / self.rotation_period_days),
         );
-        let tilt = Matrix::rotate(Vector3::unit_x(), self.tilt as f32);
-        let translate = Matrix::translate(Vector3 {
+        let tilt = Matrix4x4::rotate(Vector3::unit_x(), self.tilt as f32);
+        let translate = Matrix4x4::translate(Vector3 {
             x: distance_scaling(self.distance_from_parent_km)
                 + parent_radius
                     .map(|r| radius_scaling(r as f64) + radius_scaling(self.radius_km))
@@ -155,12 +161,12 @@ impl RenderSolarObject {
             z: 0.0,
         });
         let orbit = if let Some(orbital_period_days) = self.orbital_period_days {
-            Matrix::rotate(
+            Matrix4x4::rotate(
                 UP,
                 time_scaling(PI * 2.0 * time.as_secs_f64() / orbital_period_days),
             )
         } else {
-            Matrix::identity()
+            Matrix4x4::identity()
         };
         let model_matrix = parent_matrix
             * orbit
@@ -169,10 +175,16 @@ impl RenderSolarObject {
             * rotate
             * scale
             * *self.scene_model.model.model_matrix();
+        let normal_matrix = Matrix3x3::to_mat3_inverse_transpose(model_matrix);
         queue.write_buffer(
-            &self.scene_model.model_buffer,
+            &self.scene_model.model_matrix_buffer,
             0,
             cast_slice(&[model_matrix]),
+        );
+        queue.write_buffer(
+            &self.scene_model.normal_matrix_buffer,
+            0,
+            cast_slice(&[normal_matrix.byte_aligned()]),
         );
         for child in &self.children {
             child.update_buffers_inner(

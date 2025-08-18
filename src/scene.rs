@@ -12,8 +12,8 @@ use winit::dpi::PhysicalSize;
 
 use crate::{
     camera::{camera::Camera, camera_control::CameraControl, projection::Projection},
-    matrix::Matrix,
-    model::{Model, ModelBindGroupDescriptor},
+    matrix::{Matrix3x3, Matrix4x4},
+    model::{Model, ModelNormalBindGroupDescriptor},
     model_render_pass::ModelRenderPass,
     render_target::{RenderTarget, RenderTargetConfig},
     solar_object::{render_solar_object::RenderSolarObject, solar_object::SolarObject},
@@ -22,29 +22,46 @@ use crate::{
 #[derive(Debug)]
 pub struct SceneModel {
     pub model: Model,
-    pub model_buffer: Buffer,
+    pub model_matrix_buffer: Buffer,
     pub model_bind_group: BindGroup,
+    pub normal_matrix_buffer: Buffer,
 }
 
 impl SceneModel {
-    pub fn new(device: &Device, model: Model, model_layout: ModelBindGroupDescriptor) -> Self {
-        let model_buffer = device.create_buffer_init(&BufferInitDescriptor {
+    pub fn new(
+        device: &Device,
+        model: Model,
+        model_normal_matrix_layout: ModelNormalBindGroupDescriptor,
+    ) -> Self {
+        let model_matrix_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("model buffer"),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            contents: cast_slice(&[Matrix::identity()]),
+            contents: cast_slice(&[Matrix4x4::identity()]),
         });
-        let model_bind_group = device.create_bind_group(&BindGroupDescriptor {
+        let normal_matrix_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("normal buffer"),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            contents: cast_slice(&[Matrix3x3::identity().byte_aligned()]),
+        });
+        let model_matrix_bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("model bind group"),
-            layout: &model_layout.layout,
-            entries: &[BindGroupEntry {
-                binding: model_layout.binding,
-                resource: model_buffer.as_entire_binding(),
-            }],
+            layout: &model_normal_matrix_layout.layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: model_normal_matrix_layout.model_binding,
+                    resource: model_matrix_buffer.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: model_normal_matrix_layout.normal_binding,
+                    resource: normal_matrix_buffer.as_entire_binding(),
+                },
+            ],
         });
         Self {
             model,
-            model_buffer,
-            model_bind_group,
+            model_matrix_buffer,
+            model_bind_group: model_matrix_bind_group,
+            normal_matrix_buffer,
         }
     }
 }
@@ -78,10 +95,15 @@ impl Scene {
         let model_render_pass = ModelRenderPass::new(device, render_target, &view_proj_buffer);
 
         let texture_layout = model_render_pass.texture_layout();
-        let model_layout = model_render_pass.model_layout();
+        let model_normal_matrix_layout = model_render_pass.model_normal_matrix_layout();
 
-        let solar_object =
-            RenderSolarObject::new(solar_object, queue, device, model_layout, texture_layout);
+        let solar_object = RenderSolarObject::new(
+            solar_object,
+            queue,
+            device,
+            model_normal_matrix_layout,
+            texture_layout,
+        );
 
         Scene {
             init_time: now,
