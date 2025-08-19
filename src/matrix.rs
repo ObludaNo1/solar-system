@@ -89,6 +89,12 @@ impl Matrix3x3 {
         }
     }
 
+    pub fn scale(scale: Vector3<f32>) -> Self {
+        Matrix3x3 {
+            data: Matrix3::new(scale.x, 0.0, 0.0, 0.0, scale.y, 0.0, 0.0, 0.0, scale.z).into(),
+        }
+    }
+
     pub fn byte_aligned(&self) -> Matrix3x3ByteAligned {
         Matrix3x3ByteAligned {
             data: [
@@ -96,6 +102,16 @@ impl Matrix3x3 {
                 [self.data[1][0], self.data[1][1], self.data[1][2], 0.0],
                 [self.data[2][0], self.data[2][1], self.data[2][2], 0.0],
             ],
+        }
+    }
+}
+
+impl Mul for Matrix3x3 {
+    type Output = Matrix3x3;
+
+    fn mul(self, rhs: Matrix3x3) -> Self::Output {
+        Matrix3x3 {
+            data: (Matrix3::from(self.data) * Matrix3::from(rhs.data)).into(),
         }
     }
 }

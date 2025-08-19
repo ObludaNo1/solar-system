@@ -37,6 +37,7 @@ pub struct RenderSolarObject {
     pub tilt: f64,
     pub children: Vec<RenderSolarObject>,
     pub scene_model: SceneModel,
+    pub inverse_normals: bool,
 }
 
 struct SolarObjectInner {
@@ -81,6 +82,7 @@ impl RenderSolarObject {
             device,
             model_normal_matrix_layout,
             texture_layout,
+            true,
         )
     }
 
@@ -90,6 +92,7 @@ impl RenderSolarObject {
         device: &Device,
         model_normal_matrix_layout: ModelNormalBindGroupDescriptor,
         texture_layout: TextureBindGroupDescriptor,
+        inverse_normals: bool,
     ) -> Self {
         let texture = RgbaTexture::from_image(
             device,
@@ -115,6 +118,7 @@ impl RenderSolarObject {
                         device,
                         model_normal_matrix_layout,
                         texture_layout,
+                        false,
                     )
                 })
                 .collect(),
@@ -131,6 +135,7 @@ impl RenderSolarObject {
                 ),
                 model_normal_matrix_layout,
             ),
+            inverse_normals,
         }
     }
 
@@ -175,7 +180,10 @@ impl RenderSolarObject {
             * rotate
             * scale
             * *self.scene_model.model.model_matrix();
-        let normal_matrix = Matrix3x3::to_mat3_inverse_transpose(model_matrix);
+        let mut normal_matrix = Matrix3x3::to_mat3_inverse_transpose(model_matrix);
+        if self.inverse_normals {
+            normal_matrix = Matrix3x3::scale(Vector3::new(-1.0, -1.0, -1.0)) * normal_matrix;
+        }
         queue.write_buffer(
             &self.scene_model.model_matrix_buffer,
             0,
