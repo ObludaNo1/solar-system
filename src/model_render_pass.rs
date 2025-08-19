@@ -1,7 +1,13 @@
-use wgpu::*;
+use bytemuck::cast_slice;
+use cgmath::{Matrix4, Vector4};
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    *,
+};
 
 use crate::{
-    model::{MeshBuffers, ModelNormalBindGroupDescriptor, Vertex},
+    camera::camera::Camera,
+    model::{MeshBuffers, Vertex, VertexBindGroupDescriptor},
     render_target::{RenderTarget, RenderTargetConfig},
     scene::SceneModel,
     texture::texture::TextureBindGroupDescriptor,
@@ -10,17 +16,14 @@ use crate::{
 #[derive(Debug)]
 pub struct ModelRenderPass {
     render_pipeline: RenderPipeline,
-    view_proj_bind_group: BindGroup,
-    model_normal_mat_layout: BindGroupLayout,
+    vertex_mat_layout: BindGroupLayout,
     texture_bind_group_layout: BindGroupLayout,
+    light_pos_group: BindGroup,
+    light_pos_buffer: Buffer,
 }
 
 impl ModelRenderPass {
-    pub fn new(
-        device: &Device,
-        render_target: &RenderTargetConfig,
-        view_proj_buffer: &Buffer,
-    ) -> ModelRenderPass {
+    pub fn new(device: &Device, render_target: &RenderTargetConfig) -> ModelRenderPass {
         let vertex_bind_group_entry = |binding: u32| BindGroupLayoutEntry {
             binding,
             visibility: ShaderStages::VERTEX,
@@ -31,14 +34,40 @@ impl ModelRenderPass {
             },
             count: None,
         };
-        let view_proj_mat_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        let vertex_mat_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             label: Some("view-proj layout"),
-            entries: &[vertex_bind_group_entry(0)],
+            entries: &[
+                vertex_bind_group_entry(0),
+                vertex_bind_group_entry(1),
+                vertex_bind_group_entry(2),
+            ],
         });
 
-        let model_normal_mat_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("model-normal layout"),
-            entries: &[vertex_bind_group_entry(0), vertex_bind_group_entry(1)],
+        let light_pos_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("camera space light pos layout"),
+            entries: &[BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::FRAGMENT,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let light_pos_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Light Position Buffer"),
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            contents: cast_slice(&[0.0f32, 0.0, 0.0, 0.0]),
+        });
+        let light_pos_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("Light Position Bind Group"),
+            layout: &light_pos_layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: light_pos_buffer.as_entire_binding(),
+            }],
         });
 
         let texture_bind_group_layout =
@@ -64,22 +93,12 @@ impl ModelRenderPass {
                 ],
             });
 
-        let view_proj_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: Some("view-proj bind group"),
-            layout: &view_proj_mat_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: view_proj_buffer.as_entire_binding(),
-            }],
-        });
-
         let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[
-                // view-projection matrix
-                &view_proj_mat_layout,
-                // model and normal matrix
-                &model_normal_mat_layout,
+                // mvp matrix, mv matrix, normal matrix
+                &vertex_mat_layout,
+                &light_pos_layout,
                 &texture_bind_group_layout,
             ],
             push_constant_ranges: &[],
@@ -150,9 +169,19 @@ impl ModelRenderPass {
 
         ModelRenderPass {
             render_pipeline,
-            view_proj_bind_group,
-            model_normal_mat_layout,
+            vertex_mat_layout,
+            light_pos_buffer,
+            light_pos_group,
             texture_bind_group_layout,
+        }
+    }
+
+    pub fn vertex_matrix_layout(&self) -> VertexBindGroupDescriptor<'_> {
+        VertexBindGroupDescriptor {
+            layout: &self.vertex_mat_layout,
+            mvp_binding: 0,
+            mv_binding: 1,
+            normal_binding: 2,
         }
     }
 
@@ -164,12 +193,11 @@ impl ModelRenderPass {
         }
     }
 
-    pub fn model_normal_matrix_layout(&self) -> ModelNormalBindGroupDescriptor<'_> {
-        ModelNormalBindGroupDescriptor {
-            layout: &self.model_normal_mat_layout,
-            model_binding: 0,
-            normal_binding: 1,
-        }
+    pub fn update_buffers(&self, queue: &Queue, camera: &Camera) {
+        let view_matrix: Matrix4<f32> = camera.view_matrix().data.into();
+        let light_pos = Vector4::new(0.0, 0.0, 0.0, 1.0);
+        let camera_space_light: [f32; 4] = (view_matrix * light_pos).into();
+        queue.write_buffer(&self.light_pos_buffer, 0, cast_slice(&[camera_space_light]));
     }
 
     pub fn record_draw_commands<'a>(
@@ -206,9 +234,9 @@ impl ModelRenderPass {
         });
 
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_bind_group(0, &self.view_proj_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.light_pos_group, &[]);
         for scene_model in models {
-            render_pass.set_bind_group(1, &scene_model.model_bind_group, &[]);
+            render_pass.set_bind_group(0, &scene_model.model_bind_group, &[]);
             render_pass.set_bind_group(2, scene_model.model.texture_bind_group(), &[]);
             for MeshBuffers {
                 texture_bind_group,

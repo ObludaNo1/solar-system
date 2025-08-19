@@ -1,10 +1,10 @@
 // Vertex shader
 
 @group(0) @binding(0)
-var<uniform> view_proj_mat: mat4x4<f32>;
-@group(1) @binding(0)
-var<uniform> model_mat: mat4x4<f32>;
-@group(1) @binding(1)
+var<uniform> mvp_mat: mat4x4<f32>;
+@group(0) @binding(1)
+var<uniform> mv_mat: mat4x4<f32>;
+@group(0) @binding(2)
 var<uniform> normal_mat: mat3x3<f32>;
 
 struct VertexInput {
@@ -25,18 +25,24 @@ fn vs_main(
     model: VertexInput,
 ) -> VertexOutput {
     var out: VertexOutput;
-    var world_position = model_mat * vec4<f32>(model.position, 1.0);
-    out.clip_position = view_proj_mat * world_position;
+
+    var position_4d = vec4<f32>(model.position, 1.0);
+    out.clip_position = mvp_mat * position_4d;
+
+    var camera_position = mv_mat * position_4d;
     // ?? world position.z should be always 1, since model matrix should not change W
-    out.position = world_position.xyz / world_position.w;
+    out.position = camera_position.xyz / camera_position.w;
+    
     out.tex_coords = model.tex_coords;
     out.normal = normal_mat * model.normal;
+    
     return out;
 }
 
 // Fragment shader
 
-const LIGHT_POS: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
+@group(1) @binding(0)
+var<uniform> camera_space_light_pos: vec3<f32>;
 
 @group(2) @binding(0)
 var tex_data: texture_2d<f32>;
@@ -53,9 +59,15 @@ var tex_sampler: sampler;
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var normal = normalize(in.normal);
-    var light_dir = normalize(LIGHT_POS - in.position);
+    var light_dir = normalize(camera_space_light_pos - in.position);
     var diffuse = max(dot(normal, light_dir), 0.0);
 
+    var view_dir = normalize(-in.position);
+    var half_vec = normalize(light_dir + view_dir);
+
+    var spec_angle = max(dot(half_vec, normal), 0.0);
+    var specular = pow(spec_angle, 4.0);
+
     var texel = textureSample(tex_data, tex_sampler, in.tex_coords);
-    return vec4<f32>(texel.rgb * diffuse, texel.a);
+    return vec4<f32>(texel.rgb * (diffuse + specular), texel.a);
 }

@@ -59,9 +59,10 @@ pub struct Model {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ModelNormalBindGroupDescriptor<'a> {
+pub struct VertexBindGroupDescriptor<'a> {
     pub layout: &'a BindGroupLayout,
-    pub model_binding: u32,
+    pub mvp_binding: u32,
+    pub mv_binding: u32,
     pub normal_binding: u32,
 }
 

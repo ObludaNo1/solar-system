@@ -7,7 +7,7 @@ use cgmath::{InnerSpace, Matrix, Matrix3, Matrix4, Rad, SquareMatrix, Vector3};
 pub struct Matrix4x4 {
     // The `data` field is required for uniform layout, even if not read directly.
     #[allow(dead_code)]
-    data: [[f32; 4]; 4],
+    pub data: [[f32; 4]; 4],
 }
 
 unsafe impl Pod for Matrix4x4 {}
@@ -37,12 +37,6 @@ impl Matrix4x4 {
             data: Matrix4::from_nonuniform_scale(scale.x, scale.y, scale.z).into(),
         }
     }
-
-    pub fn view_proj(camera: Matrix4<f32>, projection: Matrix4<f32>) -> Self {
-        Matrix4x4 {
-            data: (projection * camera).into(),
-        }
-    }
 }
 
 impl Mul for Matrix4x4 {
@@ -55,9 +49,17 @@ impl Mul for Matrix4x4 {
     }
 }
 
+impl From<Matrix4<f32>> for Matrix4x4 {
+    fn from(matrix: Matrix4<f32>) -> Self {
+        Matrix4x4 {
+            data: matrix.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Matrix3x3 {
-    data: [[f32; 3]; 3],
+    pub data: [[f32; 3]; 3],
 }
 
 impl Matrix3x3 {

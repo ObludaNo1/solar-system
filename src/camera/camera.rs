@@ -14,6 +14,9 @@ use crate::{
 pub struct Camera {
     pub camera_control: Arc<Mutex<CameraControl>>,
     pub projection: Projection,
+
+    view_matrix: Matrix4x4,
+    projection_matrix: Matrix4x4,
 }
 
 impl Camera {
@@ -21,6 +24,8 @@ impl Camera {
         Self {
             camera_control,
             projection,
+            view_matrix: Matrix4x4::identity(),
+            projection_matrix: Matrix4x4::identity(),
         }
     }
 
@@ -28,10 +33,16 @@ impl Camera {
         self.projection.resize(new_size);
     }
 
-    pub fn view_proj_matrix(&mut self, now: Instant) -> Matrix4x4 {
-        Matrix4x4::view_proj(
-            self.camera_control.lock().unwrap().snapshot(now),
-            self.projection.matrix(),
-        )
+    pub fn update_view_proj_matrices(&mut self, now: Instant) {
+        self.view_matrix = self.camera_control.lock().unwrap().snapshot(now).into();
+        self.projection_matrix = self.projection.matrix().into();
+    }
+
+    pub fn view_matrix(&self) -> Matrix4x4 {
+        self.view_matrix
+    }
+
+    pub fn projection_matrix(&self) -> Matrix4x4 {
+        self.projection_matrix
     }
 }

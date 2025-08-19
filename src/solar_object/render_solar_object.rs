@@ -6,9 +6,9 @@ use image::DynamicImage;
 use wgpu::*;
 
 use crate::{
-    camera::camera_control::UP,
+    camera::{camera::Camera, camera_control::UP},
     matrix::{Matrix3x3, Matrix4x4},
-    model::{ModelNormalBindGroupDescriptor, sphere::create_sphere},
+    model::{VertexBindGroupDescriptor, sphere::create_sphere},
     scene::SceneModel,
     solar_object::solar_object::SolarObject,
     texture::texture::{RgbaTexture, TextureBindGroupDescriptor},
@@ -73,7 +73,7 @@ impl RenderSolarObject {
         solar_object: SolarObject,
         queue: &Queue,
         device: &Device,
-        model_normal_matrix_layout: ModelNormalBindGroupDescriptor,
+        model_normal_matrix_layout: VertexBindGroupDescriptor,
         texture_layout: TextureBindGroupDescriptor,
     ) -> Self {
         RenderSolarObject::new_inner(
@@ -90,7 +90,7 @@ impl RenderSolarObject {
         mut solar_object: SolarObjectInner,
         queue: &Queue,
         device: &Device,
-        model_normal_matrix_layout: ModelNormalBindGroupDescriptor,
+        model_normal_matrix_layout: VertexBindGroupDescriptor,
         texture_layout: TextureBindGroupDescriptor,
         inverse_normals: bool,
     ) -> Self {
@@ -139,14 +139,15 @@ impl RenderSolarObject {
         }
     }
 
-    pub fn update_buffers(&self, time: Duration, queue: &Queue) {
-        self.update_buffers_inner(time, queue, Matrix4x4::identity(), None);
+    pub fn update_buffers(&self, time: Duration, queue: &Queue, camera: &Camera) {
+        self.update_buffers_inner(time, queue, camera, Matrix4x4::identity(), None);
     }
 
     fn update_buffers_inner(
         &self,
         time: Duration,
         queue: &Queue,
+        camera: &Camera,
         parent_matrix: Matrix4x4,
         parent_radius: Option<f32>,
     ) {
@@ -184,20 +185,31 @@ impl RenderSolarObject {
         if self.inverse_normals {
             normal_matrix = Matrix3x3::scale(Vector3::new(-1.0, -1.0, -1.0)) * normal_matrix;
         }
+
+        let view_matrix = camera.view_matrix();
+        let projection_matrix = camera.projection_matrix();
+
         queue.write_buffer(
-            &self.scene_model.model_matrix_buffer,
+            &self.scene_model.mvp_matrix,
             0,
-            cast_slice(&[model_matrix]),
+            cast_slice(&[projection_matrix * view_matrix * model_matrix]),
         );
         queue.write_buffer(
-            &self.scene_model.normal_matrix_buffer,
+            &self.scene_model.mv_matrix,
+            0,
+            cast_slice(&[view_matrix * model_matrix]),
+        );
+        queue.write_buffer(
+            &self.scene_model.normal_matrix,
             0,
             cast_slice(&[normal_matrix.byte_aligned()]),
         );
+
         for child in &self.children {
             child.update_buffers_inner(
                 time,
                 queue,
+                camera,
                 parent_matrix * orbit * translate,
                 Some(self.radius_km as f32),
             );
